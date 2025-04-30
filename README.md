@@ -10,15 +10,6 @@ A customizable widget for Algorand asset swapping that can be embedded in any we
 - Support for both TestNet and MainNet
 - Integration with Pera Wallet
 
-## Installation
-
-```bash
-# Node v20.x
-npm install
-npm run dev    # Start development server
-npm run build  # Build for production
-```
-
 ## Usage
 
 The Pera Swap Widget can be embedded in your application using an iframe:
@@ -41,11 +32,3 @@ The widget can be configured using URL search parameters:
 | `assetIn` | ID of the asset to be used as the input asset (default: ALGO) | Asset ID |
 | `assetOut` | ID of the asset to be used as the output asset (default: USDC) | Asset ID |
 | `iframeBg` | Background color of the widget (default: #FFFFFF) | Hex color code |
-
-## Development
-
-This project is built with:
-- React 19
-- TypeScript
-- Vite
-- SCSS for styling
