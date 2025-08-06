@@ -1,0 +1,47 @@
+{
+  "name": "@perawallet/swap",
+  "version": "0.1.0",
+  "description": "Algorand swap utilities and widget integration",
+  "main": "dist/index.js",
+  "module": "dist/index.mjs",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.mjs",
+      "require": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "scripts": {
+    "build": "tsup",
+    "dev": "tsup --watch",
+    "clean": "rm -rf dist",
+    "prepublishOnly": "npm run clean && npm run build"
+  },
+  "keywords": [
+    "algorand",
+    "pera",
+    "wallet",
+    "swap",
+    "widget",
+    "iframe"
+  ],
+  "author": "Pera Wallet",
+  "license": "MIT",
+  "devDependencies": {
+    "tsup": "^8.0.0",
+    "typescript": "^5.0.0"
+  },
+  "peerDependencies": {},
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/perawallet/pera-swap-widget"
+  },
+  "bugs": {
+    "url": "https://github.com/perawallet/pera-swap-widget/issues"
+  },
+  "homepage": "https://github.com/perawallet/pera-swap-widget#readme"
+} 
