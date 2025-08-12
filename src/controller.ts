@@ -1,5 +1,5 @@
 import { PeraSwap } from './swap'
-import { Transaction } from 'algosdk'
+import algosdk, { Transaction } from 'algosdk'
 
 // TODO: Add proper types for the swap success response
 export interface SwapSuccessResponse {
@@ -85,16 +85,22 @@ export class WidgetController {
    * Handle messages from the widget
    */
   private handleMessage(event: MessageEvent): void {
-    if (event.source !== window.parent || !event.data.type || !event.data.message) {
+    // Accept messages from the widget iframe; only require a structured payload
+    if (!event.data || !event.data.type || !event.data.message) {
       return
     }
 
     switch (event.data.type) {
       case 'TXN_SIGN_REQUEST': {
-        const { txGroups } = event.data.message
-        
+        const { txGroups } = event.data.message as { txGroups: Uint8Array[][] }
+
+        // Decode bytes to Transaction objects before handing to consumer
+        const decodedTxGroups: Transaction[][] = txGroups.map((group) =>
+          group.map((bytes) => algosdk.decodeUnsignedTransaction(bytes))
+        )
+
         if (this.config.onTxnSignRequest) {
-          this.config.onTxnSignRequest({ txGroups })
+          this.config.onTxnSignRequest({ txGroups: decodedTxGroups })
             .then((signedTxns) => {
               WidgetController.sendMessageToWidget({
                 data: {

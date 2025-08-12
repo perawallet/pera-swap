@@ -1,8 +1,10 @@
 import React, { useState, useRef, useEffect } from 'react'
-import { WidgetController, SwapSuccessResponse } from '@perawallet/swap'
-import type { Transaction } from 'algosdk'
+import { WidgetController } from '@perawallet/swap'
+import { useWallet } from '../context/WalletContext'
+import peraWalletManager from '../context/PeraWalletManager'
 
 const ParentSignerExample: React.FC = () => {
+  const { isConnected, accountAddress: walletAddress } = useWallet()
   const [config, setConfig] = useState({
     network: 'mainnet' as 'mainnet' | 'testnet',
     theme: 'light' as 'light' | 'dark',
@@ -17,15 +19,12 @@ const ParentSignerExample: React.FC = () => {
   const iframeRef = useRef<HTMLIFrameElement>(null)
   const controllerRef = useRef<WidgetController | null>(null)
 
-  // Mock wallet for demonstration
-  const mockWallet = {
-    signTransactions: async (txGroups: Transaction[][]): Promise<Uint8Array[]> => {
-      console.log('Mock wallet signing transactions:', txGroups)
-      // In a real implementation, this would use an actual wallet
-      // For demo purposes, we'll just return mock signed transaction bytes
-      return txGroups.flat().map(() => new Uint8Array(32)) // Mock 32-byte signed transactions
+  // Update account address when wallet connects
+  useEffect(() => {
+    if (isConnected && walletAddress) {
+      setConfig(prev => ({ ...prev, accountAddress: walletAddress }))
     }
-  }
+  }, [isConnected, walletAddress])
 
   const generateWidgetUrl = () => {
     if (config.useParentSigner && !config.accountAddress) {
@@ -54,14 +53,24 @@ const ParentSignerExample: React.FC = () => {
     if (controllerRef.current) {
       controllerRef.current.removeWidgetEventListeners()
     }
-
+    
     controllerRef.current = new WidgetController({
       onTxnSignRequest: async ({ txGroups }) => {
         setStatus('Received transaction signing request from widget')
         setStatusType('info')
         
+        if (!isConnected) {
+          const error = 'Wallet not connected. Please connect your wallet first.'
+          setStatus(error)
+          setStatusType('error')
+          throw new Error(error)
+        }
+        
         try {
-          const signedTxns = await mockWallet.signTransactions(txGroups)
+          const signerTransactionGroups = txGroups.map((transactions) => 
+            transactions.map((txn) => ({ txn }))
+          )
+          const signedTxns = await peraWalletManager.signTransaction(signerTransactionGroups)
           setStatus('Transactions signed successfully')
           setStatusType('success')
           return signedTxns
@@ -75,10 +84,9 @@ const ParentSignerExample: React.FC = () => {
         setStatus('Transaction signing request timed out')
         setStatusType('error')
       },
-      onSwapSuccess: (response: SwapSuccessResponse) => {
+      onSwapSuccess: () => {
         setStatus('Swap completed successfully!')
         setStatusType('success')
-        console.log('Swap response:', response)
       }
     })
 
@@ -109,6 +117,17 @@ const ParentSignerExample: React.FC = () => {
     <div className="example-card">
       <h2>Example 4: Parent Signer Integration</h2>
       <p>Demonstrate parent signer functionality - handle transaction signing in the parent application</p>
+      
+      <div className="wallet-status">
+        <h3>Wallet Connection Status</h3>
+        <div className={`status-indicator ${isConnected ? 'connected' : 'disconnected'}`}>
+          {isConnected ? (
+            <span>✅ Connected: {walletAddress?.slice(0, 6)}...{walletAddress?.slice(-4)}</span>
+          ) : (
+            <span>❌ Not Connected - Please connect your wallet using the button in the top right</span>
+          )}
+        </div>
+      </div>
       
       <div className="config-section">
         <h3>Configuration</h3>
@@ -169,13 +188,15 @@ const ParentSignerExample: React.FC = () => {
               type="text" 
               value={config.accountAddress} 
               onChange={(e) => setConfig({...config, accountAddress: e.target.value})}
-              placeholder="ABCDEF..."
-              disabled={!config.useParentSigner}
+              placeholder={isConnected ? "Auto-filled from wallet" : "ABCDEF..."}
+              disabled={!config.useParentSigner || isConnected}
             />
           </div>
         </div>
-        <button onClick={generateWidgetUrl}>Generate Widget URL</button>
-        <button onClick={loadWidget} disabled={!widgetUrl}>Load Widget</button>
+        <div className="button-container">
+          <button onClick={generateWidgetUrl}>Generate Widget URL</button>
+          <button onClick={loadWidget} disabled={!widgetUrl}>Load Widget</button>
+        </div>
       </div>
 
       {status && (

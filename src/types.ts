@@ -1,3 +1,5 @@
+import type { SwapSuccessResponse } from './controller'
+
 /** Search param keys that can be passed to the widget for configuration */
 export enum SwapWidgetSearchParamKey {
   /** When set to `true`, the widget will always try to
@@ -125,4 +127,47 @@ export interface GetAssetsResponse {
   next: string | null
   previous: string | null
   results: Asset[]
-} 
+}
+
+// Message types for iframe communication
+export interface TxnSignRequestMessage {
+  message: {
+    type: 'TXN_SIGN_REQUEST'
+    // Wire format: bytes. Controller will decode to Transaction[][] before exposing to consumers
+    txGroups: Uint8Array[][]
+  }
+}
+
+export interface TxnSignResponseMessage {
+  message: {
+    type: 'TXN_SIGN_RESPONSE'
+    signedTxns: Uint8Array[]
+  }
+}
+
+export interface FailedTxnSignMessage {
+  message: {
+    type: 'FAILED_TXN_SIGN'
+    error: Error
+  }
+}
+
+export interface TxnSignRequestTimeoutMessage {
+  message: {
+    type: 'TXN_SIGN_REQUEST_TIMEOUT'
+  }
+}
+
+export interface SwapSuccessMessage {
+  message: {
+    type: 'SWAP_SUCCESS'
+    data: SwapSuccessResponse
+  }
+}
+
+export type WidgetMessage = 
+  | TxnSignRequestMessage
+  | TxnSignResponseMessage
+  | FailedTxnSignMessage
+  | TxnSignRequestTimeoutMessage
+  | SwapSuccessMessage 
