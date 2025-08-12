@@ -31,11 +31,13 @@
   ],
   "author": "Pera Wallet",
   "license": "MIT",
+  "dependencies": {
+    "algosdk": "^3.2.0"
+  },
   "devDependencies": {
     "tsup": "^8.0.0",
     "typescript": "^5.0.0"
   },
-  "peerDependencies": {},
   "repository": {
     "type": "git",
     "url": "https://github.com/perawallet/pera-swap-widget"

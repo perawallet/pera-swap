@@ -56,13 +56,93 @@ const testnetAsset = await peraSwap.getAsset(31566704)
 
 | Parameter | Description | Values |
 |-----------|-------------|--------|
-| `network` | Algorand network | `mainnet`, `testnet` |
-| `theme` | Widget theme | `light`, `dark` |
-| `assetIn` | Input asset ID | Asset ID |
-| `assetOut` | Output asset ID | Asset ID |
-| `iframeBg` | Background color | Hex color |
-| `useParentSigner` | Use parent signer | boolean |
-| `accountAddress` | Account address | string |
+| `network` | Algorand network | `'mainnet'` or `'testnet'` |
+| `theme` | Widget theme | `'light'` or `'dark'` |
+| `assetIn` | Input asset ID | Asset ID (number or string) |
+| `assetOut` | Output asset ID | Asset ID (number or string) |
+| `iframeBg` | Background color | Hex color string |
+| `useParentSigner` | Use parent signer | `boolean` |
+| `accountAddress` | Account address | `string` |
+
+### Type Definitions
+
+The package uses string literal types for better developer experience:
+
+```typescript
+type WidgetAppTheme = 'light' | 'dark'
+type WidgetNetwork = 'mainnet' | 'testnet'
+type SwapProvider = 'tinyman' | 'tinyman-swap-router' | 'vestige-v4'
+```
+
+### Parent Signer Support
+
+The package supports parent signer functionality, allowing the parent website to handle transaction signing:
+
+```typescript
+import { WidgetController } from '@perawallet/swap'
+
+// Generate widget URL with parent signer
+const widgetUrl = WidgetController.generateWidgetIframeUrl({
+  network: 'mainnet',
+  useParentSigner: true,
+  accountAddress: 'ABCDEF...',
+  themeVariables: {
+    theme: 'dark',
+    iframeBg: '#242424'
+  },
+  assetIds: [0, 31566704] // ALGO, USDC
+})
+
+// Set up controller for handling messages
+const controller = new WidgetController({
+  onTxnSignRequest: async ({ txGroups }) => {
+    // Sign transactions using your wallet
+    const signedTxns = await yourWallet.signTransactions(txGroups)
+    return signedTxns
+  },
+  onTxnSignRequestTimeout: () => {
+    console.log('Transaction signing timed out')
+  },
+  onSwapSuccess: (response) => {
+    console.log('Swap completed:', response)
+  }
+})
+
+controller.addWidgetEventListeners()
+```
+
+## Examples
+
+This package includes comprehensive examples demonstrating different integration approaches:
+
+### React Examples
+
+The React examples showcase four different ways to integrate the Pera Swap Widget:
+
+1. **Widget URL Generator** - Generate widget URLs for iframe embedding
+2. **Direct Iframe Creation** - Programmatically create and manage iframes
+3. **Custom UI with Swap API** - Build custom interfaces using the swap API
+4. **Parent Signer Integration** - Handle transaction signing in the parent application
+
+#### Running the React Examples
+
+```bash
+# Navigate to examples directory
+cd examples/react
+
+# Install dependencies
+npm install
+
+# Start development server
+npm run dev
+```
+
+The examples are located in the `examples/react/` directory and demonstrate:
+- Widget configuration and customization
+- API integration patterns
+- Error handling and loading states
+- Parent signer functionality
+- TypeScript best practices
 
 ## Development
 

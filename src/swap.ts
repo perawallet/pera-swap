@@ -180,7 +180,7 @@ export class PeraSwap {
     swapType?: SwapType
   }): Promise<{results: SwapQuote[]}> {
     const body: CreateQuoteBody = {
-      providers: params.providers || [SwapProvider.TINYMAN, SwapProvider.VESTIGE_V4],
+      providers: params.providers || ['tinyman', 'vestige-v4'],
       swapper_address: params.swapperAddress,
       swap_type: params.swapType || 'fixed-input',
       asset_in_id: params.assetInId,

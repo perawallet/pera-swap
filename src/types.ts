@@ -24,15 +24,9 @@ export enum SwapWidgetSearchParamKey {
   IFRAME_BACKGROUND = "iframeBg"
 }
 
-export enum WidgetAppTheme {
-  Light = "light",
-  Dark = "dark"
-}
+export type WidgetAppTheme = "light" | "dark"
 
-export enum WidgetNetwork {
-  Mainnet = "mainnet",
-  Testnet = "testnet"
-}
+export type WidgetNetwork = "mainnet" | "testnet"
 
 export interface WidgetConfig {
   /** The preferred Algorand network that will be used by the widget */
@@ -67,11 +61,7 @@ export interface WidgetThemeColorVariables {
 export type WidgetThemeVariables = WidgetThemeColorVariables;
 
 // Swap API Types
-export enum SwapProvider {
-  TINYMAN = "tinyman",
-  TINYMAN_SWAP_ROUTER = "tinyman-swap-router",
-  VESTIGE_V4 = "vestige-v4"
-}
+export type SwapProvider = "tinyman" | "tinyman-swap-router" | "vestige-v4"
 
 export type SwapType = "fixed-input" | "fixed-output"
 
