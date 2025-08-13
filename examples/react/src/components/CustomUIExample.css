@@ -1,0 +1,262 @@
+.transaction-item {
+  margin-bottom: 20px;
+  border-radius: 8px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.transaction-header {
+  background: #f8f9fa;
+  padding: 12px 16px;
+  border-bottom: 1px solid #e9ecef;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.transaction-title {
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.transaction-type {
+  background: #007bff;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.code-editor {
+  background: #1e1e1e;
+  border-radius: 0 0 8px 8px;
+}
+
+.code-header {
+  background: #2d2d30;
+  padding: 8px 16px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #3e3e42;
+}
+
+.file-name {
+  color: #cccccc;
+  font-size: 13px;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+}
+
+.code-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.copy-btn {
+  background: #007acc;
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.copy-btn:hover {
+  background: #005a9e;
+}
+
+.code-content {
+  padding: 16px;
+  max-height: 400px;
+  overflow-y: auto;
+  text-align: left;
+}
+
+.json-code {
+  margin: 0;
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+  font-size: 13px;
+  line-height: 1.5;
+  color: #d4d4d4;
+  background: transparent;
+  border: none;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.json-code code {
+  color: #d4d4d4;
+}
+
+.transaction-groups {
+  margin-top: 20px;
+}
+
+.transaction-group {
+  background: #f8f9fa;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid #e9ecef;
+}
+
+.transaction-group h5 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  font-size: 16px;
+}
+
+.transaction-group p {
+  margin: 4px 0;
+  color: #6c757d;
+  font-size: 14px;
+}
+
+.transaction-details {
+  margin-top: 16px;
+}
+
+.transaction-details h6 {
+  margin: 16px 0 8px 0;
+  color: #495057;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+details {
+  margin-top: 12px;
+}
+
+details summary {
+  background: #e9ecef;
+  padding: 8px 12px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-weight: 500;
+  color: #495057;
+  transition: background-color 0.2s;
+}
+
+details summary:hover {
+  background: #dee2e6;
+}
+
+details[open] summary {
+  border-radius: 4px 4px 0 0;
+}
+
+.quotes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
+}
+
+.quote-card {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.quote-card h4 {
+  margin: 0 0 12px 0;
+  color: #495057;
+  text-transform: capitalize;
+}
+
+.quote-details {
+  margin-bottom: 16px;
+}
+
+.quote-details > div {
+  margin-bottom: 12px;
+}
+
+.quote-details p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: #6c757d;
+}
+
+.prepare-btn {
+  background: #007bff;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.prepare-btn:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.prepare-btn:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+}
+
+.config-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.config-grid > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.config-grid label {
+  margin-bottom: 4px;
+  font-weight: 500;
+  color: #495057;
+}
+
+.config-grid input {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.config-grid input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.error-message {
+  background: #f8d7da;
+  color: #721c24;
+  padding: 12px;
+  border-radius: 4px;
+  margin: 16px 0;
+  border: 1px solid #f5c6cb;
+}
+
+.selected-quote {
+  background: #e7f3ff;
+  border: 1px solid #b3d9ff;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.selected-quote h4 {
+  margin: 0 0 12px 0;
+  color: #0056b3;
+}
+
+.selected-quote p {
+  margin: 4px 0;
+  color: #495057;
+}

@@ -125,14 +125,15 @@ export class PeraSwap {
   /**
    * Prepare transactions for a swap
    */
-  async prepareTransactions(quoteId: string): Promise<PrepareTransactionsResponse> {
+  async prepareTransactions(quoteId: string, depositAddress?: string): Promise<PrepareTransactionsResponse> {
     return makeRequest<PrepareTransactionsResponse>(
       this.baseURL,
       `/v1/dex-swap/prepare-transactions/`,
       {
         method: 'POST',
         body: JSON.stringify({
-          quote: quoteId
+          quote: quoteId,
+          deposit_address: depositAddress
         })
       }
     )

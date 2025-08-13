@@ -53,6 +53,7 @@
 
 .status-indicator.connected {
   background: #28a745;
+  border: 1px solid white;
 }
 
 .status-indicator.disconnected {
