@@ -1,0 +1,33 @@
+name: "🚀 release"
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  release:
+    name: 🚀 release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Setup repo
+        uses: actions/checkout@v3
+        with:
+          persist-credentials: false
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 22.x
+          registry-url: https://registry.npmjs.org
+
+      - name: Debug npm registry
+        run: npm config get registry
+
+      - name: Build app
+        run: npm ci && npm run build
+
+      - name: 🚀 publish
+        run: npm publish --access public
+        env:
+          NODE_AUTH_TOKEN: ${{secrets.NPM_AUTH_TOKEN}}
