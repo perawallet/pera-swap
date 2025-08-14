@@ -1,5 +1,5 @@
-import { SwapProvider, SwapType, CreateQuoteBody, SwapQuote, PrepareTransactionsResponse, Asset, GetAssetsResponse, WidgetConfig, WidgetNetwork, WidgetAppTheme } from './types'
-import { makeRequest, getPeraBaseUrl, DEFAULT_WIDGET_URL } from './utils'
+import { SwapProvider, SwapType, CreateQuoteBody, SwapQuote, PrepareTransactionsResponse, Asset, GetAssetsResponse } from './types'
+import { makeRequest, getPeraBaseUrl } from './utils'
 
 /**
  * PeraSwap class for managing swap operations and widget generation
@@ -26,77 +26,6 @@ export class PeraSwap {
    */
   getNetwork(): 'mainnet' | 'testnet' {
     return this.network
-  }
-
-  /**
-   * Generate a URL for the Pera Swap Widget iframe
-   */
-  generateWidgetUrl(config: WidgetConfig = {}): string {
-    const url = new URL(DEFAULT_WIDGET_URL)
-    
-    // Add search parameters based on config
-    if (config.network) {
-      url.searchParams.set('network', config.network)
-    }
-    
-    if (config.theme) {
-      url.searchParams.set('theme', config.theme)
-    }
-    
-    if (config.assetIn !== undefined) {
-      url.searchParams.set('assetIn', String(config.assetIn))
-    }
-    
-    if (config.assetOut !== undefined) {
-      url.searchParams.set('assetOut', String(config.assetOut))
-    }
-    
-    if (config.iframeBg) {
-      url.searchParams.set('iframeBg', config.iframeBg)
-    }
-    
-    if (config.useParentSigner) {
-      url.searchParams.set('useParentSigner', 'true')
-      
-      if (config.accountAddress) {
-        url.searchParams.set('accountAddress', config.accountAddress)
-      }
-    }
-    
-    return url.toString()
-  }
-
-  /**
-   * Create an iframe element with the swap widget
-   */
-  createWidgetIframe(
-    config: WidgetConfig = {},
-    options: {
-      width?: string;
-      height?: string;
-      className?: string;
-      id?: string;
-    } = {}
-  ): HTMLIFrameElement {
-    const iframe = document.createElement('iframe')
-    
-    iframe.src = this.generateWidgetUrl(config)
-    iframe.width = options.width || '100%'
-    iframe.height = options.height || '488px'
-    
-    if (options.className) {
-      iframe.className = options.className
-    }
-    
-    if (options.id) {
-      iframe.id = options.id
-    }
-    
-    // Set default styling
-    iframe.style.border = 'none'
-    iframe.style.borderRadius = '12px'
-    
-    return iframe
   }
 
   /**

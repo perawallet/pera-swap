@@ -1,5 +1,6 @@
-import { PeraSwap } from './swap'
 import algosdk, { Transaction } from 'algosdk'
+import { WidgetConfig } from './types'
+import { DEFAULT_WIDGET_URL } from './utils'
 
 export interface WidgetControllerConfig {
   onTxnSignRequest?: (data: { txGroups: Transaction[][] }) => Promise<Uint8Array[]>
@@ -27,12 +28,48 @@ export class WidgetController {
   }
 
   /**
-   * Generate widget iframe URL with parent signer support
+   * Generate a URL for the Pera Swap Widget iframe
+   */
+  static generateWidgetUrl(config: WidgetConfig = {}): string {
+    const url = new URL(DEFAULT_WIDGET_URL)
+    
+    // Add search parameters based on config
+    if (config.network) {
+      url.searchParams.set('network', config.network)
+    }
+    
+    if (config.theme) {
+      url.searchParams.set('theme', config.theme)
+    }
+    
+    if (config.assetIn !== undefined) {
+      url.searchParams.set('assetIn', String(config.assetIn))
+    }
+    
+    if (config.assetOut !== undefined) {
+      url.searchParams.set('assetOut', String(config.assetOut))
+    }
+    
+    if (config.iframeBg) {
+      url.searchParams.set('iframeBg', config.iframeBg)
+    }
+    
+    if (config.useParentSigner) {
+      url.searchParams.set('useParentSigner', 'true')
+      
+      if (config.accountAddress) {
+        url.searchParams.set('accountAddress', config.accountAddress)
+      }
+    }
+    
+    return url.toString()
+  }
+
+  /**
+   * Generate widget iframe URL with parent signer support (legacy method)
    */
   static generateWidgetIframeUrl(options: WidgetControllerOptions): string {
-    const peraSwap = new PeraSwap(options.network || 'mainnet')
-    
-    const widgetConfig = {
+    const widgetConfig: WidgetConfig = {
       network: options.network || 'mainnet',
       theme: options.themeVariables?.theme || 'light',
       iframeBg: options.themeVariables?.iframeBg,
@@ -42,7 +79,36 @@ export class WidgetController {
       assetOut: options.assetIds?.[1] || 31566704 // USDC
     }
 
-    return peraSwap.generateWidgetUrl(widgetConfig)
+    return WidgetController.generateWidgetUrl(widgetConfig)
+  }
+
+  /**
+   * Create an iframe element with the swap widget
+   */
+  static createWidgetIframe(
+    config: WidgetConfig = {},
+    options: {
+      width?: string;
+      height?: string;
+      className?: string;
+      id?: string;
+    } = {}
+  ): HTMLIFrameElement {
+    const iframe = document.createElement('iframe')
+    
+    iframe.src = WidgetController.generateWidgetUrl(config)
+    iframe.width = options.width || '100%'
+    iframe.height = options.height || '488px'
+    
+    if (options.className) {
+      iframe.className = options.className
+    }
+    
+    if (options.id) {
+      iframe.id = options.id
+    }
+    
+    return iframe
   }
 
   /**

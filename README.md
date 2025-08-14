@@ -13,19 +13,19 @@ npm install @perawallet/swap
 ### Unified API
 
 ```javascript
-import { PeraSwap } from '@perawallet/swap'
+import { PeraSwap, WidgetController } from '@perawallet/swap'
 
-// Create a PeraSwap instance
+// Create a PeraSwap instance for API operations
 const peraSwap = new PeraSwap('mainnet')
 
-// Widget functionality
-const widgetUrl = peraSwap.generateWidgetUrl({
+// Widget functionality (now in WidgetController)
+const widgetUrl = WidgetController.generateWidgetUrl({
   theme: 'dark',
   assetIn: 0, // ALGO
   assetOut: 31566704 // USDC
 })
 
-const iframe = peraSwap.createWidgetIframe({
+const iframe = WidgetController.createWidgetIframe({
   theme: 'dark'
 })
 document.body.appendChild(iframe)
@@ -39,9 +39,24 @@ const quote = await peraSwap.createSwapQuote({
   swapperAddress: 'ABCDEF...'
 })
 
+// Direct API calls
+const quoteResponse = await peraSwap.createQuote({
+  providers: ['tinyman', 'vestige-v4'],
+  swapper_address: 'ABCDEF...',
+  swap_type: 'fixed-input',
+  asset_in_id: 0,
+  asset_out_id: 31566704,
+  amount: '1000000',
+  slippage: '0.5'
+})
+
+// Prepare transactions for signing
+const transactions = await peraSwap.prepareTransactions(quote.results[0].quote_id_str)
+
 // Asset management
 const asset = await peraSwap.getAsset(31566704)
 const assets = await peraSwap.searchAssets('USDC')
+const availableAssets = await peraSwap.getAvailableAssets({ asset_in_id: 0 })
 
 // Switch networks
 peraSwap.updateNetwork('testnet')
@@ -54,15 +69,57 @@ const testnetAsset = await peraSwap.getAsset(31566704)
 
 ### Widget Configuration
 
-| Parameter | Description | Values |
-|-----------|-------------|--------|
-| `network` | Algorand network | `'mainnet'` or `'testnet'` |
-| `theme` | Widget theme | `'light'` or `'dark'` |
-| `assetIn` | Input asset ID | Asset ID (number or string) |
-| `assetOut` | Output asset ID | Asset ID (number or string) |
-| `iframeBg` | Background color | Hex color string |
-| `useParentSigner` | Use parent signer | `boolean` |
-| `accountAddress` | Account address | `string` |
+#### PeraSwap.generateWidgetUrl() Options
+
+| Parameter | Description | Values | Default |
+|-----------|-------------|--------|---------|
+| `network` | Algorand network | `'mainnet'` \| `'testnet'` | `'mainnet'` |
+| `theme` | Widget theme | `'light'` \| `'dark'` | `'light'` |
+| `assetIn` | Input asset ID | `number` \| `string` | `0` (ALGO) |
+| `assetOut` | Output asset ID | `number` \| `string` | `31566704` (USDC) |
+| `iframeBg` | Background color | Hex color string | `undefined` |
+| `useParentSigner` | Use parent signer | `boolean` | `false` |
+| `accountAddress` | Account address (required if useParentSigner=true) | `string` | `undefined` |
+
+#### WidgetController.generateWidgetIframeUrl() Options
+
+| Parameter | Description | Type |
+|-----------|-------------|------|
+| `network` | Algorand network | `'mainnet'` \| `'testnet'` |
+| `useParentSigner` | Enable parent signer | `boolean` |
+| `accountAddress` | Account address for parent signer | `string` |
+| `themeVariables.theme` | Widget theme | `'light'` \| `'dark'` |
+| `themeVariables.iframeBg` | Background color | `string` |
+| `assetIds` | [assetIn, assetOut] array | `number[]` |
+
+### API Methods
+
+#### PeraSwap Class Methods (Swap API Operations)
+
+| Method | Description | Returns |
+|--------|-------------|---------|
+| `createQuote(body, signal?)` | Create swap quote | `Promise<{results: SwapQuote[]}>` |
+| `createSwapQuote(params)` | Simplified quote creation | `Promise<{results: SwapQuote[]}>` |
+| `prepareTransactions(quoteId, depositAddress?)` | Get transaction groups | `Promise<PrepareTransactionsResponse>` |
+| `updateQuote(quoteId, exceptionText)` | Update quote with error | `Promise<any>` |
+| `getAssets(params)` | Get assets by IDs or search | `Promise<GetAssetsResponse>` |
+| `getAsset(assetId)` | Get single asset by ID | `Promise<Asset \| null>` |
+| `searchAssets(query)` | Search assets by name | `Promise<Asset[]>` |
+| `getAvailableAssets(params)` | Get available swap assets | `Promise<{results: Asset[]}>` |
+| `getAlgoPrice()` | Get ALGO price in USD | `Promise<{exchange_price: string}>` |
+| `updateNetwork(network)` | Switch network | `void` |
+| `getNetwork()` | Get current network | `'mainnet' \| 'testnet'` |
+
+#### WidgetController Class Methods (Widget & Communication)
+
+| Method | Description | Returns |
+|--------|-------------|---------|
+| `generateWidgetUrl(config)` | Static method to generate widget URL | `string` |
+| `createWidgetIframe(config, options)` | Static method to create iframe element | `HTMLIFrameElement` |
+| `generateWidgetIframeUrl(options)` | Legacy method for parent signer URLs | `string` |
+| `sendMessageToWidget(data)` | Static method to send messages to widget | `void` |
+| `addWidgetEventListeners()` | Add message event listeners | `void` |
+| `removeWidgetEventListeners()` | Remove message event listeners | `void` |
 
 ### Type Definitions
 
@@ -72,6 +129,7 @@ The package uses string literal types for better developer experience:
 type WidgetAppTheme = 'light' | 'dark'
 type WidgetNetwork = 'mainnet' | 'testnet'
 type SwapProvider = 'tinyman' | 'tinyman-swap-router' | 'vestige-v4'
+type SwapType = 'fixed-input'
 ```
 
 ### Parent Signer Support
@@ -96,19 +154,26 @@ const widgetUrl = WidgetController.generateWidgetIframeUrl({
 // Set up controller for handling messages
 const controller = new WidgetController({
   onTxnSignRequest: async ({ txGroups }) => {
+    // txGroups are already decoded Transaction[][] objects
     // Sign transactions using your wallet
-    const signedTxns = await yourWallet.signTransactions(txGroups)
-    return signedTxns
+    const signedTxns = await peraWallet.signTransaction(
+      txGroups.map(group => group.map(txn => ({ txn })))
+    )
+    return signedTxns // Return Uint8Array[]
   },
   onTxnSignRequestTimeout: () => {
     console.log('Transaction signing timed out')
   },
-  onSwapSuccess: (response) => {
-    console.log('Swap completed:', response)
+  onSwapSuccess: (signedTxns) => {
+    console.log('Swap completed with signed transactions:', signedTxns)
   }
 })
 
+// Add event listeners to handle widget messages
 controller.addWidgetEventListeners()
+
+// Don't forget to remove listeners when done
+controller.removeWidgetEventListeners()
 ```
 
 ## Examples
