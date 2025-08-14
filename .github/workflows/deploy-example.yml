@@ -33,14 +33,12 @@ jobs:
           cache-dependency-path: examples/react/package-lock.json
           
       - name: Install dependencies
-        run: |
-          cd examples/react
-          npm ci
+        run: npm ci
+        working-directory: examples/react
           
       - name: Build React app
-        run: |
-          cd examples/react
-          npm run build
+        run: npm run build
+        working-directory: examples/react
         env:
           CI: false
           
