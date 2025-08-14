@@ -97,30 +97,7 @@ export class PeraSwap {
     return makeRequest<{exchange_price: string}>(this.baseURL, "/v1/currencies/USD/")
   }
 
-  /**
-   * Create a swap quote with simplified parameters
-   */
-  async createSwapQuote(params: {
-    assetInId: number
-    assetOutId: number
-    amount: string
-    slippage: string
-    swapperAddress: string
-    providers?: SwapProvider[]
-    swapType?: SwapType
-  }): Promise<{results: SwapQuote[]}> {
-    const body: CreateQuoteBody = {
-      providers: params.providers || ['tinyman', 'vestige-v4'],
-      swapper_address: params.swapperAddress,
-      swap_type: params.swapType || 'fixed-input',
-      asset_in_id: params.assetInId,
-      asset_out_id: params.assetOutId,
-      amount: params.amount,
-      slippage: params.slippage
-    }
-    
-    return this.createQuote(body)
-  }
+
 
   /**
    * Get asset information by ID

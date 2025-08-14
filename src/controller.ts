@@ -8,17 +8,7 @@ export interface WidgetControllerConfig {
   onSwapSuccess?: (response: Uint8Array[]) => void
 }
 
-export interface WidgetControllerOptions {
-  network?: 'mainnet' | 'testnet'
-  parentUrlOrigin?: string
-  themeVariables?: {
-    theme?: 'light' | 'dark'
-    iframeBg?: string
-  }
-  assetIds?: number[]
-  useParentSigner?: boolean
-  accountAddress?: string
-}
+
 
 export class WidgetController {
   private config: WidgetControllerConfig
@@ -65,22 +55,7 @@ export class WidgetController {
     return url.toString()
   }
 
-  /**
-   * Generate widget iframe URL with parent signer support (legacy method)
-   */
-  static generateWidgetIframeUrl(options: WidgetControllerOptions): string {
-    const widgetConfig: WidgetConfig = {
-      network: options.network || 'mainnet',
-      theme: options.themeVariables?.theme || 'light',
-      iframeBg: options.themeVariables?.iframeBg,
-      useParentSigner: options.useParentSigner || false,
-      accountAddress: options.accountAddress,
-      assetIn: options.assetIds?.[0] || 0,
-      assetOut: options.assetIds?.[1] || 31566704 // USDC
-    }
 
-    return WidgetController.generateWidgetUrl(widgetConfig)
-  }
 
   /**
    * Create an iframe element with the swap widget

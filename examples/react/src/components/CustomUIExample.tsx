@@ -45,12 +45,14 @@ const CustomUIExample: React.FC = () => {
     setPreparedTransactions(null)
 
     try {
-      const result = await peraSwap.createSwapQuote({
-        assetInId: Number(formState.assetInId),
-        assetOutId: Number(formState.assetOutId),
+      const result = await peraSwap.createQuote({
+        providers: ['tinyman', 'vestige-v4'],
+        swapper_address: formState.swapperAddress,
+        swap_type: 'fixed-input',
+        asset_in_id: Number(formState.assetInId),
+        asset_out_id: Number(formState.assetOutId),
         amount: formState.amount,
-        slippage: formState.slippage,
-        swapperAddress: formState.swapperAddress
+        slippage: formState.slippage
       })
       setQuotes(result.results)
     } catch (err) {

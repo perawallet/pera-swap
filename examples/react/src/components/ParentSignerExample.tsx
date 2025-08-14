@@ -33,15 +33,14 @@ const ParentSignerExample: React.FC = () => {
       return
     }
 
-    const widgetUrl = WidgetController.generateWidgetIframeUrl({
+    const widgetUrl = WidgetController.generateWidgetUrl({
       network: config.network,
+      theme: config.theme,
+      assetIn: Number(config.assetIn),
+      assetOut: Number(config.assetOut),
+      iframeBg: config.theme === 'dark' ? '#242424' : '#FFFFFF',
       useParentSigner: config.useParentSigner,
-      accountAddress: config.accountAddress,
-      themeVariables: {
-        theme: config.theme,
-        iframeBg: config.theme === 'dark' ? '#242424' : '#FFFFFF'
-      },
-      assetIds: [Number(config.assetIn), Number(config.assetOut)]
+      accountAddress: config.accountAddress
     })
 
     setWidgetUrl(widgetUrl)

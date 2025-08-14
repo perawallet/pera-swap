@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { PeraSwap } from '@perawallet/swap'
+import { WidgetController } from '@perawallet/swap'
 import { WidgetConfig } from '@perawallet/swap'
 
 const WidgetUrlExample: React.FC = () => {
@@ -11,10 +11,8 @@ const WidgetUrlExample: React.FC = () => {
   })
   const [widgetUrl, setWidgetUrl] = useState<string>('')
 
-  const peraSwap = new PeraSwap(config.network)
-
   const generateUrl = () => {
-    const url = peraSwap.generateWidgetUrl(config)
+    const url = WidgetController.generateWidgetUrl(config)
     setWidgetUrl(url)
   }
 

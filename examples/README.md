@@ -99,9 +99,12 @@ document.body.appendChild(iframe)
 Build your own interface using the swap API methods directly.
 
 ```typescript
-const quotes = await peraSwap.createSwapQuote({
-  assetInId: 0,
-  assetOutId: 31566704,
+const quotes = await peraSwap.createQuote({
+  providers: ['tinyman', 'vestige-v4'],
+  swapper_address: 'ABCDEF...',
+  swap_type: 'fixed-input',
+  asset_in_id: 0,
+  asset_out_id: 31566704,
   amount: '1000000',
   slippage: '0.5',
 ```

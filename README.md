@@ -31,24 +31,17 @@ const iframe = WidgetController.createWidgetIframe({
 document.body.appendChild(iframe)
 
 // Swap API functionality
-const quote = await peraSwap.createSwapQuote({
-  assetInId: 0, // ALGO
-  assetOutId: 31566704, // USDC
-  amount: '1000000', // 1 ALGO (in microAlgos)
-  slippage: '0.5', // 0.5%
-  swapperAddress: 'ABCDEF...'
-})
-
-// Direct API calls
-const quoteResponse = await peraSwap.createQuote({
+const quote = await peraSwap.createQuote({
   providers: ['tinyman', 'vestige-v4'],
   swapper_address: 'ABCDEF...',
   swap_type: 'fixed-input',
-  asset_in_id: 0,
-  asset_out_id: 31566704,
-  amount: '1000000',
-  slippage: '0.5'
+  asset_in_id: 0, // ALGO
+  asset_out_id: 31566704, // USDC
+  amount: '1000000', // 1 ALGO (in microAlgos)
+  slippage: '0.5' // 0.5%
 })
+
+
 
 // Prepare transactions for signing
 const transactions = await peraSwap.prepareTransactions(quote.results[0].quote_id_str)
@@ -81,16 +74,7 @@ const testnetAsset = await peraSwap.getAsset(31566704)
 | `useParentSigner` | Use parent signer | `boolean` | `false` |
 | `accountAddress` | Account address (required if useParentSigner=true) | `string` | `undefined` |
 
-#### WidgetController.generateWidgetIframeUrl() Options
 
-| Parameter | Description | Type |
-|-----------|-------------|------|
-| `network` | Algorand network | `'mainnet'` \| `'testnet'` |
-| `useParentSigner` | Enable parent signer | `boolean` |
-| `accountAddress` | Account address for parent signer | `string` |
-| `themeVariables.theme` | Widget theme | `'light'` \| `'dark'` |
-| `themeVariables.iframeBg` | Background color | `string` |
-| `assetIds` | [assetIn, assetOut] array | `number[]` |
 
 ### API Methods
 
@@ -99,7 +83,7 @@ const testnetAsset = await peraSwap.getAsset(31566704)
 | Method | Description | Returns |
 |--------|-------------|---------|
 | `createQuote(body, signal?)` | Create swap quote | `Promise<{results: SwapQuote[]}>` |
-| `createSwapQuote(params)` | Simplified quote creation | `Promise<{results: SwapQuote[]}>` |
+
 | `prepareTransactions(quoteId, depositAddress?)` | Get transaction groups | `Promise<PrepareTransactionsResponse>` |
 | `updateQuote(quoteId, exceptionText)` | Update quote with error | `Promise<any>` |
 | `getAssets(params)` | Get assets by IDs or search | `Promise<GetAssetsResponse>` |
@@ -116,7 +100,6 @@ const testnetAsset = await peraSwap.getAsset(31566704)
 |--------|-------------|---------|
 | `generateWidgetUrl(config)` | Static method to generate widget URL | `string` |
 | `createWidgetIframe(config, options)` | Static method to create iframe element | `HTMLIFrameElement` |
-| `generateWidgetIframeUrl(options)` | Legacy method for parent signer URLs | `string` |
 | `sendMessageToWidget(data)` | Static method to send messages to widget | `void` |
 | `addWidgetEventListeners()` | Add message event listeners | `void` |
 | `removeWidgetEventListeners()` | Remove message event listeners | `void` |
@@ -140,15 +123,14 @@ The package supports parent signer functionality, allowing the parent website to
 import { WidgetController } from '@perawallet/swap'
 
 // Generate widget URL with parent signer
-const widgetUrl = WidgetController.generateWidgetIframeUrl({
+const widgetUrl = WidgetController.generateWidgetUrl({
   network: 'mainnet',
+  theme: 'dark',
+  assetIn: 0, // ALGO
+  assetOut: 31566704, // USDC
+  iframeBg: '#242424',
   useParentSigner: true,
-  accountAddress: 'ABCDEF...',
-  themeVariables: {
-    theme: 'dark',
-    iframeBg: '#242424'
-  },
-  assetIds: [0, 31566704] // ALGO, USDC
+  accountAddress: 'ABCDEF...'
 })
 
 // Set up controller for handling messages

@@ -101,12 +101,14 @@ const iframe = peraSwap.createWidgetIframe({
 
 ```typescript
 // Get swap quotes
-const quotes = await peraSwap.createSwapQuote({
-  assetInId: 0, // ALGO
-  assetOutId: 31566704, // USDC
+const quotes = await peraSwap.createQuote({
+  providers: ['tinyman', 'vestige-v4'],
+  swapper_address: 'ABCDEF...',
+  swap_type: 'fixed-input',
+  asset_in_id: 0, // ALGO
+  asset_out_id: 31566704, // USDC
   amount: '1000000', // 1 ALGO (in microAlgos)
-  slippage: '0.5', // 0.5%
-  swapperAddress: 'ABCDEF...'
+  slippage: '0.5' // 0.5%
 })
 
 // Get available assets
