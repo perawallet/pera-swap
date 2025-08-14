@@ -1,6 +1,5 @@
-import React, { useState } from 'react'
-import { PeraSwap } from '@perawallet/swap'
-import { WidgetConfig } from '@perawallet/swap'
+import React, {useState} from 'react'
+import { WidgetController, WidgetConfig } from '@perawallet/swap'
 
 const DirectIframeExample: React.FC = () => {
   const [config, setConfig] = useState<WidgetConfig>({
@@ -11,10 +10,8 @@ const DirectIframeExample: React.FC = () => {
   })
   const [iframeElement, setIframeElement] = useState<HTMLIFrameElement | null>(null)
 
-  const peraSwap = new PeraSwap(config.network)
-
   const createIframe = () => {
-    const iframe = peraSwap.createWidgetIframe(config, {
+    const iframe = WidgetController.createWidgetIframe(config, {
       width: '100%',
       height: '400px',
       className: 'swap-iframe'
@@ -36,14 +33,14 @@ const DirectIframeExample: React.FC = () => {
     <div className="example-card">
       <h2>Example 2: Direct Iframe Creation</h2>
       <p>Create an iframe element programmatically and add it to the page</p>
-      
+
       <div className="config-section">
         <h3>Configuration</h3>
         <div className="config-grid">
           <div>
             <label>Network:</label>
-            <select 
-              value={config.network} 
+            <select
+              value={config.network}
               onChange={(e) => setConfig({...config, network: e.target.value as 'mainnet' | 'testnet'})}
             >
               <option value="mainnet">Mainnet</option>
@@ -52,8 +49,8 @@ const DirectIframeExample: React.FC = () => {
           </div>
           <div>
             <label>Theme:</label>
-            <select 
-              value={config.theme} 
+            <select
+              value={config.theme}
               onChange={(e) => setConfig({...config, theme: e.target.value as 'light' | 'dark'})}
             >
               <option value="light">Light</option>
@@ -62,9 +59,9 @@ const DirectIframeExample: React.FC = () => {
           </div>
           <div>
             <label>Asset In (ID):</label>
-            <input 
-              type="text" 
-              value={config.assetIn} 
+            <input
+              type="text"
+              value={config.assetIn}
               onChange={(e) => setConfig({...config, assetIn: e.target.value})}
               pattern="[0-9]*"
               placeholder="0 for ALGO"
@@ -72,9 +69,9 @@ const DirectIframeExample: React.FC = () => {
           </div>
           <div>
             <label>Asset Out (ID):</label>
-            <input 
-              type="text" 
-              value={config.assetOut} 
+            <input
+              type="text"
+              value={config.assetOut}
               onChange={(e) => setConfig({...config, assetOut: e.target.value})}
               pattern="[0-9]*"
               placeholder="31566704 for USDC"

@@ -56,7 +56,7 @@ export const decodeSignedTransaction = (base64Transaction: string) => {
  * @returns JSON string with BigInt values converted to strings
  */
 export const safeStringify = (obj: any): string => {
-  return JSON.stringify(obj, (key, value) => {
+  return JSON.stringify(obj, (_key, value) => {
     if (typeof value === 'bigint') {
       return value.toString()
     }
