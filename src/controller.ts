@@ -21,11 +21,9 @@ export interface WidgetControllerOptions {
 
 export class WidgetController {
   private config: WidgetControllerConfig
-  private peraSwap: PeraSwap
 
   constructor(config: WidgetControllerConfig = {}) {
     this.config = config
-    this.peraSwap = new PeraSwap()
   }
 
   /**
