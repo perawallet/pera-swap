@@ -1,5 +1,3 @@
-import type { SwapSuccessResponse } from './controller'
-
 /** Search param keys that can be passed to the widget for configuration */
 export enum SwapWidgetSearchParamKey {
   /** When set to `true`, the widget will always try to
@@ -133,7 +131,6 @@ export interface GetAssetsResponse {
 export interface TxnSignRequestMessage {
   message: {
     type: 'TXN_SIGN_REQUEST'
-    // Wire format: bytes. Controller will decode to Transaction[][] before exposing to consumers
     txGroups: Uint8Array[][]
   }
 }
@@ -161,7 +158,7 @@ export interface TxnSignRequestTimeoutMessage {
 export interface SwapSuccessMessage {
   message: {
     type: 'SWAP_SUCCESS'
-    data: SwapSuccessResponse
+    data: Uint8Array[]
   }
 }
 

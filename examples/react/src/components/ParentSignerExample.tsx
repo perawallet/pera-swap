@@ -218,7 +218,7 @@ const ParentSignerExample: React.FC = () => {
               ref={iframeRef}
               src={widgetUrl} 
               width="100%" 
-              height="500px" 
+              height="488px" 
               style={{border: 'none', borderRadius: '12px'}}
               title="Pera Swap Widget with Parent Signer"
             />

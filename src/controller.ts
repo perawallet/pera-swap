@@ -1,15 +1,10 @@
 import { PeraSwap } from './swap'
 import algosdk, { Transaction } from 'algosdk'
 
-// TODO: Add proper types for the swap success response
-export interface SwapSuccessResponse {
-  [key: string]: unknown
-}
-
 export interface WidgetControllerConfig {
   onTxnSignRequest?: (data: { txGroups: Transaction[][] }) => Promise<Uint8Array[]>
   onTxnSignRequestTimeout?: () => void
-  onSwapSuccess?: (response: SwapSuccessResponse) => void
+  onSwapSuccess?: (response: Uint8Array[]) => void
 }
 
 export interface WidgetControllerOptions {
