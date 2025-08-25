@@ -3,7 +3,7 @@
  */
 export async function makeRequest<T>(
   baseURL: string,
-  endpoint: string, 
+  endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
   const url = `${baseURL}${endpoint}`
@@ -14,11 +14,23 @@ export async function makeRequest<T>(
     },
     ...options
   })
-  
+
   if (!response.ok) {
-    throw new Error(`HTTP error! status: ${response.status}`)
+    // Try to get error details from response body
+    let errorDetails = ''
+    try {
+      errorDetails = await response.json()
+    } catch {
+      try {
+        errorDetails = await response.text()
+      } catch {
+        errorDetails = 'Unable to read error details'
+      }
+    }
+
+    throw new Error(JSON.stringify(errorDetails))
   }
-  
+
   return response.json()
 }
 
@@ -26,7 +38,7 @@ export async function makeRequest<T>(
  * Get the base URL for the Pera API based on network
  */
 export function getPeraBaseUrl(network: 'mainnet' | 'testnet'): string {
-  return network === 'mainnet' 
+  return network === 'mainnet'
     ? "https://mainnet.api.perawallet.app"
     : "https://testnet.api.perawallet.app"
 }
@@ -34,4 +46,4 @@ export function getPeraBaseUrl(network: 'mainnet' | 'testnet'): string {
 /**
  * Default widget URL
  */
-export const DEFAULT_WIDGET_URL = 'https://swap-widget-staging.perawallet.app' 
+export const DEFAULT_WIDGET_URL = 'https://swap-widget.perawallet.app' 
