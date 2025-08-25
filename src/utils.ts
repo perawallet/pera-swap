@@ -46,4 +46,4 @@ export function getPeraBaseUrl(network: 'mainnet' | 'testnet'): string {
 /**
  * Default widget URL
  */
-export const DEFAULT_WIDGET_URL = 'https://swap-widget-staging.perawallet.app' 
+export const DEFAULT_WIDGET_URL = 'https://swap-widget.perawallet.app' 
