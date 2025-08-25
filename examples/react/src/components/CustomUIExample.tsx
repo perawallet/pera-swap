@@ -82,10 +82,6 @@ const CustomUIExample: React.FC = () => {
 
   return (
     <div className="example-card">
-      <style>{`
-       
-      `}</style>
-      
       <h2>Example 3: Swap API</h2>
       <p>Build your own UI and use swap API methods directly</p>
       

@@ -1,4 +1,4 @@
-import { SwapProvider, SwapType, CreateQuoteBody, SwapQuote, PrepareTransactionsResponse, Asset, GetAssetsResponse } from './types'
+import { CreateQuoteBody, SwapQuote, PrepareTransactionsResponse, Asset, GetAssetsResponse } from './types'
 import { makeRequest, getPeraBaseUrl } from './utils'
 
 /**
@@ -96,8 +96,6 @@ export class PeraSwap {
   async getAlgoPrice(): Promise<{exchange_price: string}> {
     return makeRequest<{exchange_price: string}>(this.baseURL, "/v1/currencies/USD/")
   }
-
-
 
   /**
    * Get asset information by ID

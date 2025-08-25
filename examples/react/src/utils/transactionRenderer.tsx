@@ -1,5 +1,4 @@
-import React from 'react'
-import algosdk, { Transaction } from 'algosdk'
+import { Transaction } from 'algosdk'
 import { formatAmount } from './formatUtils'
 import { safeStringify } from './transactionUtils'
 

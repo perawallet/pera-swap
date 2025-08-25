@@ -41,8 +41,6 @@ const quote = await peraSwap.createQuote({
   slippage: '0.5' // 0.5%
 })
 
-
-
 // Prepare transactions for signing
 const transactions = await peraSwap.prepareTransactions(quote.results[0].quote_id_str)
 
@@ -83,7 +81,6 @@ const testnetAsset = await peraSwap.getAsset(31566704)
 | Method | Description | Returns |
 |--------|-------------|---------|
 | `createQuote(body, signal?)` | Create swap quote | `Promise<{results: SwapQuote[]}>` |
-
 | `prepareTransactions(quoteId, depositAddress?)` | Get transaction groups | `Promise<PrepareTransactionsResponse>` |
 | `updateQuote(quoteId, exceptionText)` | Update quote with error | `Promise<any>` |
 | `getAssets(params)` | Get assets by IDs or search | `Promise<GetAssetsResponse>` |
