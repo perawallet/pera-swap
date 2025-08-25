@@ -1,6 +1,6 @@
 {
   "name": "@perawallet/swap",
-  "version": "1.0.0-beta.1",
+  "version": "1.0.0-beta.2",
   "description": "Algorand swap utilities and widget integration",
   "main": "dist/index.js",
   "module": "dist/index.mjs",
@@ -40,10 +40,10 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/perawallet/pera-swap-widget"
+    "url": "https://github.com/perawallet/pera-swap"
   },
   "bugs": {
-    "url": "https://github.com/perawallet/pera-swap-widget/issues"
+    "url": "https://github.com/perawallet/pera-swap/issues"
   },
-  "homepage": "https://github.com/perawallet/pera-swap-widget#readme"
+  "homepage": "https://github.com/perawallet/pera-swap#readme"
 } 
