@@ -108,7 +108,7 @@ const quotes = await peraSwap.createQuote({
   asset_in_id: 0, // ALGO
   asset_out_id: 31566704, // USDC
   amount: '1000000', // 1 ALGO (in microAlgos)
-  slippage: '0.5' // 0.5%
+  slippage: '0.005' // 0.5%
 })
 
 // Get available assets

@@ -106,7 +106,7 @@ const quotes = await peraSwap.createQuote({
   asset_in_id: 0,
   asset_out_id: 31566704,
   amount: '1000000',
-  slippage: '0.5',
+  slippage: '0.005',
 ```
 
 ### 4. Parent Signer Integration
