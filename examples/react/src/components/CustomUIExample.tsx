@@ -13,7 +13,7 @@ const CustomUIExample: React.FC = () => {
     assetInId: '0', // ALGO
     assetOutId: '31566704', // USDC
     amount: '1000000', // 1 ALGO
-    slippage: '0.5',
+    slippage: '0.005',
     swapperAddress: '',
     depositAddress: ''
   })
@@ -123,7 +123,7 @@ const CustomUIExample: React.FC = () => {
               type="text" 
               value={formState.slippage} 
               onChange={(e) => handleInputChange('slippage', e.target.value)}
-              placeholder="0.5"
+              placeholder="0.005"
             />
           </div>
           <div>

@@ -6,11 +6,12 @@
   "scripts": {
     "dev": "vite",
     "build": "tsc && vite build",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "deploy": "gh-pages -d dist"
   },
   "dependencies": {
     "@perawallet/connect": "^1.4.2",
-    "@perawallet/swap": "1.0.0-beta.1",
+    "@perawallet/swap": "1.0.0-beta.2",
     "algosdk": "^3.2.0",
     "buffer": "^6.0.3",
     "react": "^18.2.0",
@@ -21,6 +22,7 @@
     "@types/react": "^18.2.43",
     "@types/react-dom": "^18.2.17",
     "@vitejs/plugin-react": "^4.2.1",
+    "gh-pages": "^6.3.0",
     "typescript": "^5.2.2",
     "vite": "^5.0.8"
   }
