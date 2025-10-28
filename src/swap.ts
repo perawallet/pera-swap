@@ -1,4 +1,4 @@
-import { CreateQuoteBody, SwapQuote, PrepareTransactionsResponse, Asset, GetAssetsResponse } from './types'
+import { CreateQuoteBody, SwapQuote, PrepareTransactionsResponse, Asset, GetAssetsResponse, UpdateSwapStatusBody } from './types'
 import { makeRequest, getPeraBaseUrl } from './utils'
 
 /**
@@ -7,10 +7,12 @@ import { makeRequest, getPeraBaseUrl } from './utils'
 export class PeraSwap {
   private network: 'mainnet' | 'testnet'
   private baseURL: string
-
-  constructor(network: 'mainnet' | 'testnet' = 'mainnet') {
+  private referrerUrl?: string
+  
+  constructor(network: 'mainnet' | 'testnet' = 'mainnet', referrerUrl?: string) {
     this.network = network
     this.baseURL = getPeraBaseUrl(network)
+    this.referrerUrl = referrerUrl
   }
 
   /**
@@ -32,22 +34,30 @@ export class PeraSwap {
    * Create a swap quote
    */
   async createQuote(body: CreateQuoteBody, signal?: AbortSignal): Promise<{results: SwapQuote[]}> {
-    return makeRequest<{results: SwapQuote[]}>(this.baseURL, "/v1/dex-swap/quotes/", {
+    const bodyData = {
+      ...body,
+      referrer_url: this.referrerUrl
+    }
+    
+    return makeRequest<{results: SwapQuote[]}>(this.baseURL, "/v2/dex-swap/quotes/", {
       method: 'POST',
-      body: JSON.stringify(body),
+      body: JSON.stringify(bodyData),
       signal
     })
   }
 
   /**
-   * Update a quote with exception text
+   * Update the status of a swap
    */
-  async updateQuote(quoteId: string, exceptionText: string): Promise<any> {
-    return makeRequest(this.baseURL, `/v1/dex-swap/quotes/${quoteId}/`, {
+  async updateSwapStatus(swapId: string, body: UpdateSwapStatusBody): Promise<any> {
+    const bodyData = {
+      ...body,
+      platform: "js-sdk",
+      swap_version: "v2"
+    }
+    return makeRequest(this.baseURL, `/v2/dex-swap/swaps/${swapId}/`, {
       method: 'PATCH',
-      body: JSON.stringify({
-        exception_text: exceptionText
-      })
+      body: JSON.stringify(bodyData)
     })
   }
 
@@ -57,7 +67,7 @@ export class PeraSwap {
   async prepareTransactions(quoteId: string, depositAddress?: string): Promise<PrepareTransactionsResponse> {
     return makeRequest<PrepareTransactionsResponse>(
       this.baseURL,
-      `/v1/dex-swap/prepare-transactions/`,
+      `/v2/dex-swap/prepare-transactions/`,
       {
         method: 'POST',
         body: JSON.stringify({

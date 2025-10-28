@@ -16,7 +16,8 @@ npm install @perawallet/swap
 import { PeraSwap, WidgetController } from '@perawallet/swap'
 
 // Create a PeraSwap instance for API operations
-const peraSwap = new PeraSwap('mainnet')
+// Optional 2nd parameter lets you set a referrer URL for analytics/attribution
+const peraSwap = new PeraSwap('mainnet', 'https://myapp.example')
 
 // Widget functionality (now in WidgetController)
 const widgetUrl = WidgetController.generateWidgetUrl({
@@ -43,6 +44,13 @@ const quote = await peraSwap.createQuote({
 
 // Prepare transactions for signing
 const transactions = await peraSwap.prepareTransactions(quote.results[0].quote_id_str)
+
+// ... Sign and submit transactions with your wallet ...
+// After successfully submitting to chain, report swap status:
+await peraSwap.updateSwapStatus(String(transactions.swap_id), {
+  status: 'in_progress',
+  submitted_transaction_ids: ['<txid-1>', '<txid-2>']
+})
 
 // Asset management
 const asset = await peraSwap.getAsset(31566704)
@@ -82,7 +90,7 @@ const testnetAsset = await peraSwap.getAsset(31566704)
 |--------|-------------|---------|
 | `createQuote(body, signal?)` | Create swap quote | `Promise<{results: SwapQuote[]}>` |
 | `prepareTransactions(quoteId, depositAddress?)` | Get transaction groups | `Promise<PrepareTransactionsResponse>` |
-| `updateQuote(quoteId, exceptionText)` | Update quote with error | `Promise<any>` |
+| `updateSwapStatus(swapId, body)` | Update swap status | `Promise<any>` |
 | `getAssets(params)` | Get assets by IDs or search | `Promise<GetAssetsResponse>` |
 | `getAsset(assetId)` | Get single asset by ID | `Promise<Asset \| null>` |
 | `searchAssets(query)` | Search assets by name | `Promise<Asset[]>` |
@@ -110,6 +118,36 @@ type WidgetAppTheme = 'light' | 'dark'
 type WidgetNetwork = 'mainnet' | 'testnet'
 type SwapProvider = 'tinyman' | 'tinyman-swap-router' | 'vestige-v4'
 type SwapType = 'fixed-input'
+```
+
+### Constructor
+
+```typescript
+new PeraSwap(
+  network?: 'mainnet' | 'testnet',
+  referrerUrl?: string
+)
+```
+
+- `referrerUrl` is optional and can be used to attribute requests to your app.
+  When provided, `referrer_url` is forwarded with quote requests.
+
+### Swap Status Reporting
+
+Call `updateSwapStatus` after you submit signed transactions to the network.
+
+```typescript
+// Success path: transactions submitted to mempool
+await peraSwap.updateSwapStatus(String(prepareResponse.swap_id), {
+  status: 'in_progress',
+  submitted_transaction_ids: txIds // string[] of submitted tx ids
+})
+
+// Failure path: something went wrong while submitting
+await peraSwap.updateSwapStatus(String(prepareResponse.swap_id), {
+  status: 'failed',
+  reason: 'blockchain_error' // or 'user_cancelled' | 'other'
+})
 ```
 
 ### Parent Signer Support

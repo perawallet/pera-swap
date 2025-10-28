@@ -60,7 +60,7 @@ Generate a URL that can be used in an iframe or shared with users.
 ```typescript
 import { PeraSwap } from '@perawallet/swap'
 
-const peraSwap = new PeraSwap('mainnet')
+const peraSwap = new PeraSwap('mainnet', 'https://example.org')
 const url = peraSwap.generateWidgetUrl({
   network: 'mainnet',
   theme: 'light',
@@ -107,6 +107,21 @@ const quotes = await peraSwap.createQuote({
   asset_out_id: 31566704,
   amount: '1000000',
   slippage: '0.005',
+})
+
+const prepareResponse = await peraSwap.prepareTransactions(quotes.results[0].quote_id_str)
+
+// After signing and submitting the transactions, report status
+await peraSwap.updateSwapStatus(String(prepareResponse.swap_id), {
+  status: 'in_progress',
+  submitted_transaction_ids: ['<txid-1>', '<txid-2>']
+})
+
+// If something goes wrong
+await peraSwap.updateSwapStatus(String(prepareResponse.swap_id), {
+  status: 'failed',
+  reason: 'other'
+})
 ```
 
 ### 4. Parent Signer Integration
