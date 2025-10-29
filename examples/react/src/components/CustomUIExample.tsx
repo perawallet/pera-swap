@@ -13,7 +13,7 @@ const CustomUIExample: React.FC = () => {
     assetInId: '0', // ALGO
     assetOutId: '31566704', // USDC
     amount: '1000000', // 1 ALGO
-    slippage: '0.005',
+    slippage: '0.5',
     swapperAddress: '',
     depositAddress: ''
   })
@@ -24,7 +24,7 @@ const CustomUIExample: React.FC = () => {
   const [preparingTransactions, setPreparingTransactions] = useState<boolean>(false)
   const [error, setError] = useState<string>('')
 
-  const peraSwap = new PeraSwap('mainnet')
+  const peraSwap = new PeraSwap('mainnet', window.location.origin)
 
   const handleInputChange = (field: keyof FormState, value: string) => {
     setFormState(prev => ({
@@ -52,7 +52,7 @@ const CustomUIExample: React.FC = () => {
         asset_in_id: Number(formState.assetInId),
         asset_out_id: Number(formState.assetOutId),
         amount: formState.amount,
-        slippage: formState.slippage
+        slippage: (Number(formState.slippage) / 100).toString(), // Convert percentage to decimal
       })
       setQuotes(result.results)
     } catch (err) {
@@ -123,7 +123,7 @@ const CustomUIExample: React.FC = () => {
               type="text" 
               value={formState.slippage} 
               onChange={(e) => handleInputChange('slippage', e.target.value)}
-              placeholder="0.005"
+              placeholder="0.5"
             />
           </div>
           <div>
@@ -180,7 +180,7 @@ const CustomUIExample: React.FC = () => {
                   <div className="price-section">
                     <p><strong>Price:</strong> {formatPrice(quote.price)} {quote.asset_out.unit_name} per {quote.asset_in.unit_name}</p>
                     <p><strong>Price Impact:</strong> {formatPercentage(quote.price_impact)}</p>
-                    <p><strong>Slippage:</strong> {formatPercentage(quote.slippage)}</p>
+                    <p><strong>Slippage:</strong> {(parseFloat(quote.slippage) * 100).toFixed(2)}%</p>
                   </div>
                   
                   <div className="fees-section">

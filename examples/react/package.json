@@ -11,7 +11,7 @@
   },
   "dependencies": {
     "@perawallet/connect": "^1.4.2",
-    "@perawallet/swap": "1.0.0-beta.2",
+    "@perawallet/swap": "1.0.0-beta.3",
     "algosdk": "^3.2.0",
     "buffer": "^6.0.3",
     "react": "^18.2.0",

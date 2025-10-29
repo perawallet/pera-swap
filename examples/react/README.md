@@ -72,7 +72,7 @@ This example demonstrates the parent signer functionality, allowing the parent w
 ```typescript
 import { PeraSwap } from '@perawallet/swap'
 
-const peraSwap = new PeraSwap('mainnet') // or 'testnet'
+const peraSwap = new PeraSwap('mainnet', 'https://example.org')
 ```
 
 #### Widget Methods
@@ -109,6 +109,21 @@ const quotes = await peraSwap.createQuote({
   asset_out_id: 31566704, // USDC
   amount: '1000000', // 1 ALGO (in microAlgos)
   slippage: '0.005' // 0.5%
+})
+
+// Prepare transactions
+const prepareResponse = await peraSwap.prepareTransactions(quotes.results[0].quote_id_str)
+
+// After submitting signed txns to the chain, report status
+await peraSwap.updateSwapStatus(prepareResponse.swap_id, {
+  status: 'in_progress',
+  submitted_transaction_ids: ['<txid-1>', '<txid-2>']
+})
+
+// Or if submission failed
+await peraSwap.updateSwapStatus(prepareResponse.swap_id, {
+  status: 'failed',
+  reason: 'blockchain_error'
 })
 
 // Get available assets
