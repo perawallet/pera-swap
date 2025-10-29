@@ -118,7 +118,17 @@ export interface SwapTransactionGroup {
 }
 
 export interface PrepareTransactionsResponse {
+  swap_id: number;
+  swap_version: string;
   transaction_groups: SwapTransactionGroup[]
+}
+
+export interface UpdateSwapStatusBody {
+  status: "failed" | "in_progress";
+  submitted_transaction_ids?: string[];
+  reason?: "other" | "user_cancelled" | "invalid_submission" | "blockchain_error";
+  platform?: string;
+  swap_version?: "v1" | "v2";
 }
 
 export interface GetAssetsResponse {
