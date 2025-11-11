@@ -39,11 +39,20 @@ export class PeraSwap {
       referrer_url: this.referrerUrl
     }
     
-    return makeRequest<{results: SwapQuote[]}>(this.baseURL, "/v2/dex-swap/quotes/", {
+    const response = await makeRequest<{results: SwapQuote[]}>(this.baseURL, "/v2/dex-swap/quotes/", {
       method: 'POST',
       body: JSON.stringify(bodyData),
       signal
     })
+
+    // Filter results by providers if specified
+    if (body.providers && body.providers.length > 0) {
+      response.results = response.results.filter(quote => 
+        body.providers.includes(quote.provider)
+      )
+    }
+
+    return response
   }
 
   /**
