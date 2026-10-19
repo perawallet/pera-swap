@@ -83,6 +83,9 @@ export function WalletProvider({ children }: WalletProviderProps) {
                         setAccountAddress(null)
                     },
                 })
+            if (accounts.length === 0) {
+                return
+            }
             setIsConnected(true)
             setAccountAddress(accounts[0])
         } catch (error) {

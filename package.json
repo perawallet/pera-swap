@@ -59,7 +59,7 @@
     "test:all": "pnpm test:coverage && pnpm test:integration && pnpm test:package && playwright test",
     "check": "pnpm format:check && pnpm lint && pnpm lint:types && pnpm typecheck && pnpm test:coverage && pnpm test:integration && pnpm test:package",
     "setup": "git config core.hooksPath tools/hooks",
-    "example:dev": "pnpm --filter pera-swap-react-example dev",
+    "example:dev": "pnpm build && pnpm --filter pera-swap-react-example dev",
     "example:build": "pnpm build && pnpm --filter pera-swap-react-example build",
     "prepublishOnly": "pnpm clean && pnpm build"
   },

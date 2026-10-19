@@ -17,8 +17,9 @@ class PeraConnect extends PeraWalletConnect {
                 })
                 .catch(error => {
                     // https://github.com/perawallet/connect/blob/main/src/util/PeraWalletConnectError.ts
-                    // Ignoring the modal closed errors
+                    // Closing the modal isn't an error; settle with no accounts.
                     if (error.data?.type === 'CONNECT_MODAL_CLOSED') {
+                        resolve([])
                         return
                     }
                     reject(error)
