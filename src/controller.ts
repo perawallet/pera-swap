@@ -53,14 +53,14 @@ interface SendMessageParams {
  */
 export class WidgetController {
     private readonly config: WidgetControllerConfig
-    private readonly allowedOrigins: ReadonlySet<string>
+    private readonly allowedOrigins: readonly string[]
     private isListening = false
 
     constructor(config: WidgetControllerConfig = {}) {
         this.config = config
-        this.allowedOrigins = new Set(
-            config.allowedOrigins ?? [PERA_SWAP_WIDGET_ORIGIN],
-        )
+        this.allowedOrigins = [
+            ...(config.allowedOrigins ?? [PERA_SWAP_WIDGET_ORIGIN]),
+        ]
     }
 
     /** Generate a URL for the Pera Swap widget iframe. */
@@ -102,7 +102,9 @@ export class WidgetController {
 
     // Arrow function so the same reference is used to add and remove the listener.
     private readonly handleMessage = (event: MessageEvent): void => {
-        if (!this.allowedOrigins.has(event.origin)) {
+        // Kept as a plain `includes` check on `event.origin` so static analysis
+        // (CodeQL js/missing-origin-check) recognises it.
+        if (!this.allowedOrigins.includes(event.origin)) {
             return
         }
 

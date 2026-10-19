@@ -73,9 +73,7 @@ const GROUPS = [[optIn], [payment]].map(group =>
 async function openHost(
     page: Page,
 ): Promise<{ widget: Frame; untrusted: Frame }> {
-    await page.goto(
-        `/?widgetOrigin=${encodeURIComponent(WIDGET_ORIGIN)}&untrustedOrigin=${encodeURIComponent(UNTRUSTED_ORIGIN)}`,
-    )
+    await page.goto('/')
     await page.waitForFunction(() => Boolean(window.host))
 
     const frame = async (id: string): Promise<Frame> => {
@@ -239,6 +237,20 @@ test.describe('WidgetController ↔ widget iframe (cross-origin)', () => {
             await widget.evaluate(g => window.widget.requestSigning(g), GROUPS),
         ).toMatchObject({ type: 'TXN_SIGN_RESPONSE' })
         expect(await hostEvents(page)).toHaveLength(1)
+    })
+
+    test('embeds frames from the origins configured for the test servers', async ({
+        page,
+    }) => {
+        await openHost(page)
+        await expect(page.locator('#widget')).toHaveAttribute(
+            'src',
+            `${WIDGET_ORIGIN}/widget.html`,
+        )
+        await expect(page.locator('#untrusted')).toHaveAttribute(
+            'src',
+            `${UNTRUSTED_ORIGIN}/widget.html`,
+        )
     })
 
     test('renders the widget iframe with an accessible title', async ({

@@ -14,9 +14,10 @@ interface HostEvent {
     detail?: unknown
 }
 
-const params = new URLSearchParams(location.search)
-const widgetOrigin = params.get('widgetOrigin') ?? ''
-const untrustedOrigin = params.get('untrustedOrigin') ?? ''
+// Fixed origins (keep in sync with playwright.config.ts). Hard-coded rather
+// than read from the URL so the page never loads an attacker-chosen frame.
+const widgetOrigin = 'http://127.0.0.1:4302'
+const untrustedOrigin = 'http://localhost:4302'
 
 const events: HostEvent[] = []
 let behaviour: SignBehaviour = 'sign'

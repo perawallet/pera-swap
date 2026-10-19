@@ -4,8 +4,11 @@
 <script>
     // Stands in for the real widget: talks to the host page with the same
     // postMessage protocol. Driven from Playwright via window.widget.*
+    // Like the real widget, only listen to the dApp page that embeds it.
+    const HOST_ORIGIN = 'http://localhost:4301'
     const received = []
     window.addEventListener('message', event => {
+        if (event.origin !== HOST_ORIGIN) return
         received.push({ origin: event.origin, data: event.data })
     })
 
