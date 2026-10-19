@@ -9,11 +9,11 @@
  * @returns Formatted amount string
  */
 export const formatAmount = (amount: string, decimals: number = 6): string => {
-  const num = parseFloat(amount) / Math.pow(10, decimals)
-  return num.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6
-  })
+    const num = parseFloat(amount) / Math.pow(10, decimals)
+    return num.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 6,
+    })
 }
 
 /**
@@ -22,12 +22,12 @@ export const formatAmount = (amount: string, decimals: number = 6): string => {
  * @returns Formatted USD string
  */
 export const formatUSD = (usdValue: string | null): string => {
-  if (!usdValue) return 'N/A'
-  const num = parseFloat(usdValue)
-  return `$${num.toLocaleString('en-US', {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 2
-  })}`
+    if (!usdValue) return 'N/A'
+    const num = parseFloat(usdValue)
+    return `$${num.toLocaleString('en-US', {
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+    })}`
 }
 
 /**
@@ -36,8 +36,8 @@ export const formatUSD = (usdValue: string | null): string => {
  * @returns Formatted percentage string
  */
 export const formatPercentage = (percentage: string): string => {
-  const num = parseFloat(percentage)
-  return `${num.toFixed(2)}%`
+    const num = parseFloat(percentage)
+    return `${num.toFixed(2)}%`
 }
 
 /**
@@ -46,9 +46,9 @@ export const formatPercentage = (percentage: string): string => {
  * @returns Formatted price string
  */
 export const formatPrice = (price: string): string => {
-  const num = parseFloat(price)
-  return num.toLocaleString('en-US', {
-    minimumFractionDigits: 6,
-    maximumFractionDigits: 6
-  })
+    const num = parseFloat(price)
+    return num.toLocaleString('en-US', {
+        minimumFractionDigits: 6,
+        maximumFractionDigits: 6,
+    })
 }

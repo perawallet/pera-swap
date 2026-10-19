@@ -57,15 +57,33 @@
 .copy-btn {
   background: #007acc;
   color: white;
+  border: none;
   padding: 4px 8px;
   border-radius: 4px;
   font-size: 12px;
+  font-weight: normal;
   cursor: pointer;
   transition: background-color 0.2s;
 }
 
 .copy-btn:hover {
   background: #005a9e;
+  transform: none;
+  box-shadow: none;
+}
+
+.raw-transaction {
+  margin-top: 8px;
+}
+
+.raw-transaction summary {
+  font-size: 12px;
+  color: #666;
+  cursor: pointer;
+}
+
+.raw-transaction .code-editor {
+  margin-top: 8px;
 }
 
 .code-content {

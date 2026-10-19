@@ -1,0 +1,7 @@
+packages:
+    - examples/*
+
+# Supply-chain hardening: refuse to install any version published less than
+# 7 days ago. Gives the registry time to yank compromised releases before they
+# reach us. Keep in sync with the Dependabot cooldown in .github/dependabot.yml.
+minimumReleaseAge: 10080

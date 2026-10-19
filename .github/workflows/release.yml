@@ -1,34 +1,106 @@
-name: "🚀 release"
+name: Release / Publish
+
+# Publishes @perawallet/swap to npm whenever main has a version that isn't on
+# the registry yet. Bump "version" in package.json in the PR to release.
+#
+# Uses npm trusted publishing (OIDC), configured on npmjs.com for this
+# workflow file name — keep the file name `release.yml`.
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
   release:
-    name: 🚀 release
-    runs-on: ubuntu-latest
+    name: Publish to npm
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
     permissions:
-      id-token: write
-      contents: read
+      contents: write # create the GitHub release + tag
+      id-token: write # npm trusted publishing + provenance
     steps:
-      - name: Setup repo
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+
+      # Node 24 ships npm >= 11.5.1, which trusted publishing requires.
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24.x
           registry-url: https://registry.npmjs.org
+          cache: pnpm
 
-      - name: Debug npm registry
-        run: npm config get registry
+      - name: Resolve version
+        id: version
+        run: |
+          set -euo pipefail
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
 
-      - name: Build app
-        run: npm ci && npm run build
+          if npm view "${name}@${version}" version > /dev/null 2>&1; then
+            echo "${name}@${version} is already published, skipping."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
 
-      - name: 🚀 publish
-        run: npm publish --access public --provenance
+          # Prereleases stay on `latest` until a stable version exists, then
+          # move to `next` so `npm install` never picks a prerelease.
+          stable="$(npm view "${name}" versions --json 2>/dev/null \
+            | node -e "const v=JSON.parse(require('fs').readFileSync(0,'utf8')||'[]');console.log([].concat(v).some(x=>!x.includes('-')))")"
+          if [[ "${version}" == *-* && "${stable}" == "true" ]]; then
+            echo "tag=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ "${version}" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.version.outputs.publish == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Test
+        if: steps.version.outputs.publish == 'true'
+        run: pnpm test
+
+      - name: Build
+        if: steps.version.outputs.publish == 'true'
+        run: pnpm build
+
+      - name: Publish to npm
+        if: steps.version.outputs.publish == 'true'
+        env:
+          NPM_TAG: ${{ steps.version.outputs.tag }}
+        run: npm publish --provenance --access public --tag "${NPM_TAG}"
+
+      - name: Create GitHub release
+        if: steps.version.outputs.publish == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          PRERELEASE: ${{ steps.version.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          flags=(--generate-notes --target "${GITHUB_SHA}" --title "v${VERSION}")
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "v${VERSION}" "${flags[@]}"

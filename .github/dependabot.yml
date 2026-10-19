@@ -1,0 +1,73 @@
+version: 2
+updates:
+  # npm dependencies for the library and the example app. Grouped so there is
+  # one PR per tier instead of one per package.
+  - package-ecosystem: npm
+    directories:
+      - /
+      - /examples/react
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Helsinki
+    open-pull-requests-limit: 10
+    versioning-strategy: increase
+    # Mirror pnpm's minimumReleaseAge (7 days) so Dependabot doesn't propose
+    # versions our install would reject. Security updates bypass cooldown.
+    cooldown:
+      default-days: 7
+    labels:
+      - dependencies
+    groups:
+      types:
+        patterns:
+          - "@types/*"
+      vite-vitest:
+        patterns:
+          - vite
+          - vitest
+          - "@vitest/*"
+          - "@vitejs/*"
+      oxc:
+        patterns:
+          - oxlint
+          - oxlint-*
+          - oxfmt
+      react:
+        patterns:
+          - react
+          - react-dom
+      dev-minor-patch:
+        dependency-type: development
+        update-types:
+          - minor
+          - patch
+      prod-minor-patch:
+        dependency-type: production
+        update-types:
+          - minor
+          - patch
+
+  # GitHub Actions are pinned by SHA; Dependabot rewrites the SHA and the
+  # trailing version comment.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+      time: "09:00"
+      timezone: Europe/Helsinki
+    open-pull-requests-limit: 5
+    labels:
+      - dependencies
+      - ci
+    groups:
+      actions:
+        patterns:
+          - "*"
+    ignore:
+      # pnpm/action-setup v6 ignores `packageManager` and installs pnpm 11,
+      # which rewrites pnpm 10 lockfiles (pnpm/action-setup#225). Stay on v5.
+      - dependency-name: pnpm/action-setup
+        update-types: [version-update:semver-major]
