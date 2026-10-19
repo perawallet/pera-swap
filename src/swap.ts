@@ -77,7 +77,7 @@ export class PeraSwap {
         )
 
         // The API may return quotes from providers the caller didn't ask for.
-        if (body.providers.length > 0) {
+        if (body.providers?.length) {
             const allowed = new Set(body.providers)
             response.results = response.results.filter(quote =>
                 allowed.has(quote.provider),
@@ -158,7 +158,7 @@ export class PeraSwap {
         })
     }
 
-    /** Single asset by ID. Resolves to `null` if it can't be found or the request fails. */
+    /** Single asset by ID. Resolves to `null` if it can't be found or the request fails; rejects only when aborted. */
     async getAsset(
         assetId: number,
         signal?: AbortSignal,
@@ -170,16 +170,18 @@ export class PeraSwap {
             )
             return response.results[0] ?? null
         } catch {
+            signal?.throwIfAborted()
             return null
         }
     }
 
-    /** Search assets by name. Resolves to `[]` if the request fails. */
+    /** Search assets by name. Resolves to `[]` if the request fails; rejects only when aborted. */
     async searchAssets(query: string, signal?: AbortSignal): Promise<Asset[]> {
         try {
             const response = await this.getAssets({ q: query }, signal)
             return response.results
         } catch {
+            signal?.throwIfAborted()
             return []
         }
     }

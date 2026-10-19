@@ -165,6 +165,18 @@ describe('PeraSwap', () => {
 
             expect(result.results).toEqual(quotes)
         })
+
+        it('tolerates a missing providers list from untyped callers', async () => {
+            const quotes = [{ provider: 'tinyman' }] as SwapQuote[]
+            fetch.mockResolvedValue(jsonResponse({ results: quotes }))
+            const { providers: _, ...withoutProviders } = quoteBody
+
+            const result = await new PeraSwap({ fetch }).createQuote(
+                withoutProviders as CreateQuoteBody,
+            )
+
+            expect(result.results).toEqual(quotes)
+        })
     })
 
     it('updateSwapStatus patches the swap with SDK metadata', async () => {
@@ -238,6 +250,16 @@ describe('PeraSwap', () => {
                 new PeraSwap({ fetch }).getAsset(1),
             ).resolves.toBeNull()
         })
+
+        it('rejects when aborted instead of resolving null', async () => {
+            const controller = new AbortController()
+            controller.abort()
+            fetch.mockRejectedValue(controller.signal.reason)
+
+            await expect(
+                new PeraSwap({ fetch }).getAsset(1, controller.signal),
+            ).rejects.toThrow(controller.signal.reason as Error)
+        })
     })
 
     describe('searchAssets', () => {
@@ -254,6 +276,16 @@ describe('PeraSwap', () => {
             await expect(
                 new PeraSwap({ fetch }).searchAssets('usdc'),
             ).resolves.toEqual([])
+        })
+
+        it('rejects when aborted instead of resolving empty', async () => {
+            const controller = new AbortController()
+            controller.abort()
+            fetch.mockRejectedValue(controller.signal.reason)
+
+            await expect(
+                new PeraSwap({ fetch }).searchAssets('usdc', controller.signal),
+            ).rejects.toThrow(controller.signal.reason as Error)
         })
     })
 })
