@@ -25,7 +25,8 @@ export interface WidgetControllerConfig {
     /**
      * Origins the controller accepts messages from and replies to.
      * Defaults to the Pera Swap widget origin. Only change this if you host
-     * the widget yourself.
+     * the widget yourself. Each entry must be an exact `https:` origin
+     * (`http:` is accepted for localhost); anything else throws.
      */
     allowedOrigins?: string[]
 }
@@ -58,9 +59,9 @@ export class WidgetController {
 
     constructor(config: WidgetControllerConfig = {}) {
         this.config = config
-        this.allowedOrigins = [
-            ...(config.allowedOrigins ?? [PERA_SWAP_WIDGET_ORIGIN]),
-        ]
+        this.allowedOrigins = (
+            config.allowedOrigins ?? [PERA_SWAP_WIDGET_ORIGIN]
+        ).map(assertTrustedOrigin)
     }
 
     /** Generate a URL for the Pera Swap widget iframe. */
@@ -171,4 +172,27 @@ export class WidgetController {
             reply({ type: WidgetMessageType.FAILED_TXN_SIGN, error: cloneable })
         }
     }
+}
+
+const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]'])
+
+// Signing requests are trusted by origin, so reject entries that would match
+// more than intended ('null' is shared by every sandboxed frame) or that can
+// be spoofed on the network (plain http to a remote host).
+function assertTrustedOrigin(origin: string): string {
+    let url: URL | undefined
+    try {
+        url = new URL(origin)
+    } catch {
+        // Reported below.
+    }
+    const isSecure =
+        url?.protocol === 'https:' ||
+        (url?.protocol === 'http:' && LOCAL_HOSTNAMES.has(url.hostname))
+    if (!isSecure || url?.origin !== origin) {
+        throw new TypeError(
+            `Invalid allowedOrigins entry "${origin}": expected an https origin such as "${PERA_SWAP_WIDGET_ORIGIN}"`,
+        )
+    }
+    return origin
 }

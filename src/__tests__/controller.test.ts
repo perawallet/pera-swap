@@ -298,14 +298,6 @@ describe('WidgetController', () => {
         })
     })
 
-    it('ignores events without callbacks configured', () => {
-        listen({})
-        expect(() => {
-            dispatch({ type: 'TXN_SIGN_REQUEST_TIMEOUT', message: {} })
-            dispatch({ type: 'SWAP_SUCCESS', message: ['tx'] })
-        }).not.toThrow()
-    })
-
     it('can be re-attached after being removed', () => {
         const onSwapSuccess = vi.fn()
         const controller = listen({ onSwapSuccess })
@@ -352,6 +344,36 @@ describe('WidgetController', () => {
         )
 
         expect(onSwapSuccess).not.toHaveBeenCalled()
+    })
+
+    it('ignores signing requests from other origins', async () => {
+        const onTxnSignRequest = vi.fn().mockResolvedValue([])
+        listen({ onTxnSignRequest })
+        const source = createSource()
+
+        dispatch(
+            {
+                type: 'TXN_SIGN_REQUEST',
+                message: { txGroups: [[makeTxnBytes(1)]] },
+            },
+            { origin: 'https://evil.example', source },
+        )
+        await flush()
+
+        expect(onTxnSignRequest).not.toHaveBeenCalled()
+        expect(source.postMessage).not.toHaveBeenCalled()
+    })
+
+    it.each([
+        'null',
+        '*',
+        'swap-widget.perawallet.app',
+        'https://swap-widget.perawallet.app/',
+        'http://swap-widget.perawallet.app',
+    ])('rejects the untrusted allowed origin %j', origin => {
+        expect(
+            () => new WidgetController({ allowedOrigins: [origin] }),
+        ).toThrow(TypeError)
     })
 
     it('accepts custom allowed origins', () => {

@@ -81,7 +81,8 @@ If `onTxnSignRequest` rejects, the widget is told signing failed.
 
 For security, the controller only accepts messages from (and replies to) the
 Pera Swap widget origin, `https://swap-widget.perawallet.app`. If you host the
-widget elsewhere, pass `allowedOrigins`.
+widget elsewhere, pass `allowedOrigins` (exact `https:` origins; `http:` only
+for localhost).
 
 ## Using the Swap API
 
