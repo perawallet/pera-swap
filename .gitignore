@@ -9,3 +9,5 @@ coverage/
 .DS_Store
 .idea/
 *.code-workspace
+test-results/
+playwright-report/

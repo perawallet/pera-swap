@@ -18,6 +18,12 @@ describe('buildUrl', () => {
             buildUrl(BASE, '/v1/assets/', { q: 'usdc', a: undefined, b: '' }),
         ).toBe('https://api.example/v1/assets/?q=usdc')
     })
+
+    it('stringifies numbers, keeps 0 and encodes values', () => {
+        expect(buildUrl(BASE, '/x/', { id: 0, q: 'a b&c' })).toBe(
+            'https://api.example/x/?id=0&q=a+b%26c',
+        )
+    })
 })
 
 describe('request', () => {
@@ -96,6 +102,24 @@ describe('request', () => {
             status: 502,
             body: 'Bad gateway',
         })
+    })
+
+    it('rejects when a successful response is not JSON', async () => {
+        const fetch = vi
+            .fn()
+            .mockResolvedValue(new Response('<html>', { status: 200 }))
+        await expect(request(BASE, '/x/', { fetch })).rejects.toThrow(
+            SyntaxError,
+        )
+    })
+
+    it('propagates network errors from fetch', async () => {
+        const fetch = vi
+            .fn()
+            .mockRejectedValue(new TypeError('Failed to fetch'))
+        await expect(request(BASE, '/x/', { fetch })).rejects.toThrow(
+            'Failed to fetch',
+        )
     })
 
     it('reports when the error body cannot be read', async () => {

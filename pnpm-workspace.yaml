@@ -5,3 +5,7 @@ packages:
 # 7 days ago. Gives the registry time to yank compromised releases before they
 # reach us. Keep in sync with the Dependabot cooldown in .github/dependabot.yml.
 minimumReleaseAge: 10080
+
+# msw's postinstall only copies the browser service worker, which we don't use.
+ignoredBuiltDependencies:
+  - msw

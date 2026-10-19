@@ -160,7 +160,9 @@ export class WidgetController {
 
             reply({ type: WidgetMessageType.TXN_SIGN_RESPONSE, signedTxns })
         } catch (error) {
-            // Only plain Errors are guaranteed to survive structured cloning.
+            // Wallet errors may carry uncloneable fields (functions etc.), which
+            // would make postMessage throw. A plain Error always clones; browsers
+            // keep its message, but only built-in names (custom ones become 'Error').
             const { name, message: errorMessage } = toError(error)
             const cloneable = new Error(errorMessage)
             cloneable.name = name

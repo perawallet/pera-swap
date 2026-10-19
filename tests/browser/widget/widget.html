@@ -1,0 +1,67 @@
+<!doctype html>
+<meta charset="utf-8" />
+<title>Fake Pera Swap widget</title>
+<script>
+    // Stands in for the real widget: talks to the host page with the same
+    // postMessage protocol. Driven from Playwright via window.widget.*
+    const received = []
+    window.addEventListener('message', event => {
+        received.push({ origin: event.origin, data: event.data })
+    })
+
+    const fromBase64 = b64 => Uint8Array.from(atob(b64), c => c.charCodeAt(0))
+    const toBase64 = bytes => btoa(String.fromCharCode(...bytes))
+
+    function post(type, message) {
+        window.parent.postMessage({ type, message }, '*')
+    }
+
+    function nextReply(timeoutMs) {
+        const start = received.length
+        return new Promise(resolve => {
+            const timer = setTimeout(() => resolve(null), timeoutMs)
+            const check = setInterval(() => {
+                if (received.length > start) {
+                    clearTimeout(timer)
+                    clearInterval(check)
+                    resolve(received[start])
+                }
+            }, 10)
+        })
+    }
+
+    window.widget = {
+        received,
+        async requestSigning(txGroupsBase64, timeoutMs = 3000) {
+            const txGroups = txGroupsBase64.map(group => group.map(fromBase64))
+            const reply = nextReply(timeoutMs)
+            post('TXN_SIGN_REQUEST', { txGroups })
+            const result = await reply
+            if (!result) return null
+            const { message } = result.data
+            return {
+                origin: result.origin,
+                type: message.type,
+                signedTxns: message.signedTxns?.map(toBase64),
+                signedAreBytes: message.signedTxns?.every(t => t instanceof Uint8Array),
+                error: message.error && {
+                    isError: message.error instanceof Error,
+                    name: message.error.name,
+                    message: message.error.message,
+                },
+            }
+        },
+        sendMalformed(timeoutMs = 3000) {
+            const reply = nextReply(timeoutMs)
+            post('TXN_SIGN_REQUEST', { txGroups: 'not-bytes' })
+            return reply.then(r => r && r.data.message.type)
+        },
+        timeout() {
+            post('TXN_SIGN_REQUEST_TIMEOUT', {})
+        },
+        success(txIds) {
+            post('SWAP_SUCCESS', txIds)
+        },
+    }
+</script>
+<p>fake widget</p>

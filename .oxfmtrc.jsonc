@@ -14,5 +14,5 @@
     "tabWidth": 4,
     "useTabs": false,
     "trailingComma": "all",
-    "ignorePatterns": ["pnpm-lock.yaml", "CHANGELOG.md"],
+    "ignorePatterns": ["pnpm-lock.yaml", "test-results/**", "playwright-report/**"],
 }

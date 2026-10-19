@@ -53,6 +53,72 @@ describe('PeraSwap', () => {
         })
     })
 
+    it('uses the fetch from options and omits an unset referrer', async () => {
+        const globalFetch = vi.fn()
+        vi.stubGlobal('fetch', globalFetch)
+
+        await new PeraSwap({ fetch }).createQuote(quoteBody)
+
+        expect(globalFetch).not.toHaveBeenCalled()
+        expect(
+            JSON.parse(lastCall(fetch).init.body as string),
+        ).not.toHaveProperty('referrer_url')
+    })
+
+    it.each([
+        [
+            'prepareTransactions',
+            (p: PeraSwap, s: AbortSignal) =>
+                p.prepareTransactions('Q', undefined, s),
+        ],
+        [
+            'updateSwapStatus',
+            (p: PeraSwap, s: AbortSignal) =>
+                p.updateSwapStatus('1', { status: 'failed' }, s),
+        ],
+        [
+            'getAvailableAssets',
+            (p: PeraSwap, s: AbortSignal) =>
+                p.getAvailableAssets({ asset_in_id: 0 }, s),
+        ],
+        ['getAssets', (p: PeraSwap, s: AbortSignal) => p.getAssets({}, s)],
+        ['getAlgoPrice', (p: PeraSwap, s: AbortSignal) => p.getAlgoPrice(s)],
+        ['getAsset', (p: PeraSwap, s: AbortSignal) => p.getAsset(1, s)],
+        [
+            'searchAssets',
+            (p: PeraSwap, s: AbortSignal) => p.searchAssets('x', s),
+        ],
+    ])('%s forwards the abort signal', async (_name, call) => {
+        const { signal } = new AbortController()
+        await call(new PeraSwap({ fetch }), signal)
+        expect(lastCall(fetch).init.signal).toBe(signal)
+    })
+
+    it('propagates API errors from createQuote', async () => {
+        fetch.mockResolvedValue(jsonResponse({ detail: 'Invalid amount' }, 400))
+
+        await expect(
+            new PeraSwap({ fetch }).createQuote(quoteBody),
+        ).rejects.toMatchObject({
+            name: 'PeraSwapApiError',
+            status: 400,
+            body: { detail: 'Invalid amount' },
+        })
+    })
+
+    it('encodes the swap id in the path', async () => {
+        await new PeraSwap({ fetch }).updateSwapStatus('a/b', {
+            status: 'failed',
+            reason: 'other',
+        })
+        expect(lastCall(fetch).url).toBe(`${MAINNET}/v2/dex-swap/swaps/a%2Fb/`)
+    })
+
+    it('getAssets without params hits the bare endpoint', async () => {
+        await new PeraSwap({ fetch }).getAssets({})
+        expect(lastCall(fetch).url).toBe(`${MAINNET}/v1/assets/`)
+    })
+
     it('switches networks with updateNetwork', async () => {
         const peraSwap = new PeraSwap({ fetch })
         peraSwap.updateNetwork('testnet')

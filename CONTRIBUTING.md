@@ -12,17 +12,38 @@ pnpm run setup    # installs the commit-msg and pre-push Git hooks
 
 ## Day-to-day commands
 
-| Command              | What it does                                              |
-| -------------------- | --------------------------------------------------------- |
-| `pnpm test`          | Run unit tests (Vitest)                                   |
-| `pnpm test:coverage` | Tests with coverage; fails under 80%                      |
-| `pnpm lint`          | oxlint                                                    |
-| `pnpm lint:types`    | Type-aware oxlint rules (floating/misused promises)       |
-| `pnpm format`        | Format with oxfmt                                         |
-| `pnpm typecheck`     | `tsc --noEmit`                                            |
-| `pnpm build`         | Build ESM + CJS + types with tsdown (runs publint & attw) |
-| `pnpm check`         | Everything CI runs; also the pre-push hook                |
-| `pnpm example:dev`   | Run the React example against the local library           |
+| Command                 | What it does                                                         |
+| ----------------------- | -------------------------------------------------------------------- |
+| `pnpm test`             | Unit tests (Vitest)                                                  |
+| `pnpm test:coverage`    | Unit tests with coverage; fails under 95%                            |
+| `pnpm test:integration` | API integration tests against a mocked network (MSW)                 |
+| `pnpm test:package`     | Builds, packs and uses the package from ESM, CJS and TS              |
+| `pnpm test:browser`     | Builds, then runs Playwright cross-origin widget tests               |
+| `pnpm test:live`        | Read-only contract tests against the real Pera API                   |
+| `pnpm test:all`         | Everything except live tests                                         |
+| `pnpm lint`             | oxlint                                                               |
+| `pnpm lint:types`       | Type-aware oxlint rules (floating/misused promises)                  |
+| `pnpm format`           | Format with oxfmt                                                    |
+| `pnpm typecheck`        | `tsc --noEmit` for `src/` and `tests/`                               |
+| `pnpm build`            | Build ESM + CJS + types with tsdown (runs publint & attw)            |
+| `pnpm check`            | Pre-push checks: format, lint, typecheck, unit, integration, package |
+| `pnpm example:dev`      | Run the React example against the local library                      |
+
+## Tests
+
+| Layer       | Where                         | What it covers                                                                                            |
+| ----------- | ----------------------------- | --------------------------------------------------------------------------------------------------------- |
+| Unit        | `src/__tests__/*.test.ts`     | Every module in isolation. Node by default; DOM tests opt in with `// @vitest-environment jsdom`.         |
+| Integration | `tests/integration/`          | Full quote → prepare → sign → report flow with MSW at the network boundary and real algosdk transactions. |
+| Package     | `tests/package/`              | The packed tarball installed into a throwaway app: ESM import, CJS require, Node16 TypeScript typecheck.  |
+| Browser     | `tests/browser/` (Playwright) | `WidgetController` and a fake widget in a real cross-origin iframe: signing, errors, origin checks.       |
+| Live        | `tests/live/`                 | Opt-in, read-only checks that the real API still matches our types. Weekly in CI.                         |
+
+Unhandled network requests fail integration tests, so nothing reaches the real API by accident.
+
+First-time browser test setup: `pnpm exec playwright install chromium`. If a
+Chromium is already installed elsewhere, point `PLAYWRIGHT_CHROMIUM_EXECUTABLE`
+at it instead.
 
 ## Branching
 

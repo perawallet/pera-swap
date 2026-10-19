@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import { describe, expect, it } from 'vitest'
 import { createWidgetIframe, generateWidgetUrl } from '../widget/url'
 import { WidgetController } from '../controller'
@@ -34,6 +35,23 @@ describe('generateWidgetUrl', () => {
     it('ignores accountAddress unless useParentSigner is set', () => {
         const url = new URL(generateWidgetUrl({ accountAddress: 'ADDR' }))
         expect(url.searchParams.has('accountAddress')).toBe(false)
+    })
+
+    it('sets useParentSigner without an address when none is given', () => {
+        const url = new URL(generateWidgetUrl({ useParentSigner: true }))
+        expect(url.searchParams.get('useParentSigner')).toBe('true')
+        expect(url.searchParams.has('accountAddress')).toBe(false)
+    })
+
+    it('omits falsy optional values but keeps asset id 0', () => {
+        const url = new URL(
+            generateWidgetUrl({
+                assetIn: 0,
+                iframeBg: '',
+                useParentSigner: false,
+            }),
+        )
+        expect(Object.fromEntries(url.searchParams)).toEqual({ assetIn: '0' })
     })
 
     it('is exposed as a WidgetController static for compatibility', () => {

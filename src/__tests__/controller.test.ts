@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import {
     encodeUnsignedTransaction,
     makePaymentTxnWithSuggestedParamsFromObject,
@@ -155,6 +156,178 @@ describe('WidgetController', () => {
 
             expect(source.postMessage).not.toHaveBeenCalled()
         })
+        it('replies with FAILED_TXN_SIGN for undecodable bytes', async () => {
+            const onTxnSignRequest = vi.fn()
+            listen({ onTxnSignRequest })
+            const source = createSource()
+
+            dispatch(
+                {
+                    type: 'TXN_SIGN_REQUEST',
+                    message: { txGroups: [[new Uint8Array([0xff, 0x00])]] },
+                },
+                { source },
+            )
+            await flush()
+
+            expect(onTxnSignRequest).not.toHaveBeenCalled()
+            expect(source.postMessage.mock.calls[0]![0].message.type).toBe(
+                'FAILED_TXN_SIGN',
+            )
+        })
+
+        it('replies with FAILED_TXN_SIGN when txGroups is missing', async () => {
+            listen({ onTxnSignRequest: vi.fn() })
+            const source = createSource()
+
+            dispatch(
+                { type: 'TXN_SIGN_REQUEST', message: { foo: 1 } },
+                { source },
+            )
+            await flush()
+
+            expect(
+                source.postMessage.mock.calls[0]![0].message.error.message,
+            ).toBe('Invalid TXN_SIGN_REQUEST: malformed txGroups')
+        })
+
+        it('handles a signer that throws synchronously', async () => {
+            listen({
+                onTxnSignRequest: () => {
+                    throw new Error('sync boom')
+                },
+            })
+            const source = createSource()
+
+            dispatch(
+                {
+                    type: 'TXN_SIGN_REQUEST',
+                    message: { txGroups: [[makeTxnBytes(1)]] },
+                },
+                { source },
+            )
+            await flush()
+
+            expect(source.postMessage.mock.calls[0]![0].message).toMatchObject({
+                type: 'FAILED_TXN_SIGN',
+                error: { message: 'sync boom' },
+            })
+        })
+
+        it('wraps non-Error rejections', async () => {
+            listen({
+                onTxnSignRequest: () => Promise.reject('CONNECT_MODAL_CLOSED'),
+            })
+            const source = createSource()
+
+            dispatch(
+                {
+                    type: 'TXN_SIGN_REQUEST',
+                    message: { txGroups: [[makeTxnBytes(1)]] },
+                },
+                { source },
+            )
+            await flush()
+
+            const { error } = source.postMessage.mock.calls[0]![0].message
+            expect(error).toBeInstanceOf(Error)
+            expect(error).toMatchObject({
+                name: 'Error',
+                message: 'CONNECT_MODAL_CLOSED',
+            })
+        })
+
+        it('does not throw when the request has no source window', async () => {
+            const onTxnSignRequest = vi.fn().mockResolvedValue([])
+            listen({ onTxnSignRequest })
+
+            dispatch(
+                {
+                    type: 'TXN_SIGN_REQUEST',
+                    message: { txGroups: [[makeTxnBytes(1)]] },
+                },
+                { source: null },
+            )
+            await flush()
+
+            expect(onTxnSignRequest).toHaveBeenCalledOnce()
+        })
+
+        it('replies to the custom origin the request came from', async () => {
+            const origin = 'http://localhost:5173'
+            listen({
+                allowedOrigins: [origin],
+                onTxnSignRequest: vi.fn().mockResolvedValue([]),
+            })
+            const source = createSource()
+
+            dispatch(
+                {
+                    type: 'TXN_SIGN_REQUEST',
+                    message: { txGroups: [[makeTxnBytes(1)]] },
+                },
+                { origin, source },
+            )
+            await flush()
+
+            expect(source.postMessage.mock.calls[0]![1]).toBe(origin)
+        })
+
+        it('passes every transaction of every group in order', async () => {
+            const onTxnSignRequest = vi.fn().mockResolvedValue([])
+            listen({ onTxnSignRequest })
+
+            dispatch({
+                type: 'TXN_SIGN_REQUEST',
+                message: {
+                    txGroups: [
+                        [makeTxnBytes(1), makeTxnBytes(2)],
+                        [makeTxnBytes(3)],
+                    ],
+                },
+            })
+            await flush()
+
+            const { txGroups } = onTxnSignRequest.mock.calls[0]![0] as {
+                txGroups: Transaction[][]
+            }
+            expect(txGroups.map(g => g.map(t => t.payment?.amount))).toEqual([
+                [1n, 2n],
+                [3n],
+            ])
+        })
+    })
+
+    it('ignores events without callbacks configured', () => {
+        listen({})
+        expect(() => {
+            dispatch({ type: 'TXN_SIGN_REQUEST_TIMEOUT', message: {} })
+            dispatch({ type: 'SWAP_SUCCESS', message: ['tx'] })
+        }).not.toThrow()
+    })
+
+    it('can be re-attached after being removed', () => {
+        const onSwapSuccess = vi.fn()
+        const controller = listen({ onSwapSuccess })
+
+        controller.removeWidgetEventListeners()
+        controller.addWidgetEventListeners()
+        dispatch({ type: 'SWAP_SUCCESS', message: ['tx'] })
+
+        expect(onSwapSuccess).toHaveBeenCalledOnce()
+    })
+
+    it('keeps instances independent', () => {
+        const a = vi.fn()
+        const b = vi.fn()
+        listen({ onSwapSuccess: a })
+        const second = listen({ onSwapSuccess: b })
+
+        second.removeWidgetEventListeners()
+        dispatch({ type: 'SWAP_SUCCESS', message: ['tx'] })
+
+        expect(a).toHaveBeenCalledOnce()
+        expect(b).not.toHaveBeenCalled()
     })
 
     it('forwards TXN_SIGN_REQUEST_TIMEOUT and SWAP_SUCCESS', () => {
