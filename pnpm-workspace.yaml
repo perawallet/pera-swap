@@ -1,6 +1,9 @@
 packages:
     - examples/*
 
+# Fail on peer dependency mismatches instead of silently resolving them.
+strictPeerDependencies: true
+
 # Supply-chain hardening: refuse to install any version published less than
 # 7 days ago. Gives the registry time to yank compromised releases before they
 # reach us. Keep in sync with the Dependabot cooldown in .github/dependabot.yml.
