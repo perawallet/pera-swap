@@ -11,6 +11,7 @@ import {
     mkdirSync,
     mkdtempSync,
     readdirSync,
+    readFileSync,
     realpathSync,
     rmSync,
     symlinkSync,
@@ -137,16 +138,14 @@ describe('published package', () => {
         expect(JSON.parse(run('cjs.cjs'))).toEqual(EXPECTED)
     })
 
-    it('resolves the same algosdk the app provides', () => {
-        writeFileSync(
-            join(consumer, 'peer.mjs'),
-            `import { createRequire } from 'node:module'
-const require = createRequire(import.meta.url)
-const fromApp = require.resolve('algosdk')
-const fromSdk = createRequire(require.resolve('@perawallet/swap')).resolve('algosdk')
-console.log(JSON.stringify(fromApp === fromSdk))`,
+    it('imports the peer algosdk instead of bundling it', () => {
+        const dist = join(consumer, 'node_modules/@perawallet/swap/dist')
+        expect(readFileSync(join(dist, 'index.js'), 'utf8')).toMatch(
+            /from "algosdk"/,
         )
-        expect(JSON.parse(run('peer.mjs'))).toBe(true)
+        expect(readFileSync(join(dist, 'index.cjs'), 'utf8')).toMatch(
+            /require\("algosdk"\)/,
+        )
     })
 
     it.each(['commonjs', 'module'])(

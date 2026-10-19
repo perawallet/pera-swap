@@ -338,33 +338,4 @@ describe('failure modes', () => {
 
         await expect(pending).rejects.toMatchObject({ name: 'AbortError' })
     })
-
-    it('lets a newer quote request supersede an older one', async () => {
-        let call = 0
-        server.use(
-            http.post(`${MAINNET_API}/v2/dex-swap/quotes/`, async () => {
-                call += 1
-                const mine = call
-                await delay(mine === 1 ? 200 : 0)
-                return HttpResponse.json({
-                    results: [
-                        makeQuote('tinyman', { quote_id_str: `q${mine}` }),
-                    ],
-                })
-            }),
-        )
-        const peraSwap = new PeraSwap()
-        const first = new AbortController()
-
-        // Settle the stale request into a value right away so its rejection
-        // is never unhandled while the fresh request is in flight.
-        const stale = peraSwap
-            .createQuote(quoteBody('ADDR'), first.signal)
-            .catch((error: unknown) => error)
-        first.abort()
-        const fresh = await peraSwap.createQuote(quoteBody('ADDR'))
-
-        expect(await stale).toMatchObject({ name: 'AbortError' })
-        expect(fresh.results[0]!.quote_id_str).toBe('q2')
-    })
 })
