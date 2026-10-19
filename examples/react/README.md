@@ -26,5 +26,5 @@ pnpm example:dev       # http://localhost:3000/pera-swap/
 
 ```bash
 pnpm example:build
-pnpm --filter pera-swap-react-example deploy   # publishes dist/ to gh-pages
+pnpm --filter pera-swap-react-example run deploy   # publishes dist/ to gh-pages
 ```

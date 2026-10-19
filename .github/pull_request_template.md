@@ -16,6 +16,7 @@
 - [ ] Have you documented any necessary changes in the project's documentation?
 - [ ] Have you added any necessary tests for your changes?
 - [ ] Have you updated any relevant dependencies?
+- [ ] Have you added a CHANGELOG entry (and called out any breaking change)?
 
 ## Additional Notes
 

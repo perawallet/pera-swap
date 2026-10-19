@@ -2,13 +2,24 @@
 
 ## 1.0.0-beta.5
 
+### Breaking
+
+- `algosdk` is now a peer dependency (`^3.2.0`) so decoded `Transaction`s come
+  from the same copy your wallet uses. Install it alongside this package if
+  your package manager doesn't install peers automatically.
+- `WidgetController` ignores messages from any origin other than the Pera Swap
+  widget, and `sendMessageToWidget` no longer posts to `'*'`. Pass
+  `allowedOrigins` / `targetOrigin` if you load the widget from another origin.
+- Requires Node.js 20 or newer.
+
 ### Security
 
 - `WidgetController` now only accepts messages from the Pera Swap widget origin
   and replies to that origin instead of `'*'`. Previously any page or frame
   could send a `TXN_SIGN_REQUEST`, trigger a wallet signing prompt and receive
   the signed transactions. Use the
-  new `allowedOrigins` option if you host the widget yourself.
+  new `allowedOrigins` option if you host the widget yourself; it only accepts
+  exact `https:` origins (`http:` for localhost) and throws otherwise.
 - `WidgetController.sendMessageToWidget` posts to the widget origin by default
   (new optional `targetOrigin`).
 
@@ -20,8 +31,9 @@
 - Malformed signing requests and decode errors now reply `FAILED_TXN_SIGN`
   instead of throwing an unhandled error and leaving the widget waiting.
 - Errors sent to the widget are always structured-cloneable.
-- Custom request headers no longer drop `Content-Type`; GET requests no longer
-  send `Content-Type` (avoids a CORS preflight).
+- GET requests no longer send `Content-Type` (avoids a CORS preflight).
+- A successful response with an empty body (e.g. `204` from
+  `updateSwapStatus`) resolves to `undefined` instead of throwing.
 - Plain-text API error bodies are reported instead of
   "Unable to read error details".
 
@@ -29,9 +41,10 @@
 
 - `PeraSwap` accepts an options object: `new PeraSwap({ network, referrerUrl, fetch })`.
   The positional form still works.
-- Optional `AbortSignal` on every `PeraSwap` request method.
+- Optional `AbortSignal` on every `PeraSwap` request method. `getAsset` /
+  `searchAssets` still never reject on failure, except when aborted.
 - `PeraSwapApiError` with `status`, `url` and `body`. `message` keeps the old
-  JSON-encoded format.
+  JSON-encoded format; `name` is `'PeraSwapApiError'`.
 - `updateSwapStatus` accepts a numeric `swapId`.
 - Standalone `generateWidgetUrl` / `createWidgetIframe` exports,
   `WidgetMessageType`, `PERA_SWAP_WIDGET_ORIGIN`, `PERA_SWAP_WIDGET_URL`, and
@@ -40,8 +53,6 @@
 
 ### Changed
 
-- `algosdk` is now a peer dependency (`^3.2.0`) so decoded `Transaction`s come
-  from the same copy your wallet uses.
 - `updateSwapStatus` resolves to `unknown` instead of `any`.
 - `SwapTransactionGroup.signed_transactions` is typed `(string | null)[]` to
   match the API.
