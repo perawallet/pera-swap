@@ -1,0 +1,22 @@
+#!/bin/sh
+# Enforces Conventional Commits: <type>(<scope>): <subject>
+# Install with `pnpm run setup`.
+
+COMMIT_MSG=$(head -n 1 "$1")
+PATTERN='^(feat|fix|docs|style|refactor|perf|test|chore|ci|build|revert)(\(.+\))?!?: .+$'
+
+# Let git's own merge/revert/fixup messages through.
+if echo "$COMMIT_MSG" | grep -qE '^(Merge|Revert|fixup!|squash!) '; then
+    exit 0
+fi
+
+if ! echo "$COMMIT_MSG" | grep -qE "$PATTERN"; then
+    echo "Commit message does not follow Conventional Commits:"
+    echo ""
+    echo "  $COMMIT_MSG"
+    echo ""
+    echo "Expected: <type>(<scope>): <subject>"
+    echo "Types:    feat fix docs style refactor perf test chore ci build revert"
+    echo "Example:  fix(controller): remove message listener on cleanup"
+    exit 1
+fi

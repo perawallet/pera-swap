@@ -1,235 +1,192 @@
 # @perawallet/swap
 
-Algorand swap utilities and widget integration.
+[![npm](https://img.shields.io/npm/v/@perawallet/swap)](https://www.npmjs.com/package/@perawallet/swap)
+[![CI](https://github.com/perawallet/pera-swap/actions/workflows/ci.yml/badge.svg)](https://github.com/perawallet/pera-swap/actions/workflows/ci.yml)
+
+Algorand swap utilities and Pera Swap widget integration. Use it to:
+
+- embed the **Pera Swap widget** in an iframe, optionally signing transactions with your own wallet, or
+- build your own swap UI on top of the **Pera Swap API** (quotes, transactions, assets).
+
+Ships ESM + CommonJS with TypeScript types. Uses the native `fetch` API.
 
 ## Installation
 
 ```bash
-npm install @perawallet/swap
+npm install @perawallet/swap algosdk
 ```
 
-## Usage
+`algosdk` (v3) is a peer dependency, so the `Transaction` objects you receive
+come from the same `algosdk` your wallet uses.
 
-### Unified API
+## Embedding the widget
 
-```javascript
-import { PeraSwap, WidgetController } from '@perawallet/swap'
+```ts
+import { WidgetController } from '@perawallet/swap'
 
-// Create a PeraSwap instance for API operations
-// Optional 2nd parameter lets you set a referrer URL for analytics/attribution
-const peraSwap = new PeraSwap('mainnet', 'https://myapp.example')
-
-// Widget functionality (now in WidgetController)
-const widgetUrl = WidgetController.generateWidgetUrl({
-  theme: 'dark',
-  assetIn: 0, // ALGO
-  assetOut: 31566704 // USDC
-})
-
-const iframe = WidgetController.createWidgetIframe({
-  theme: 'dark'
-})
+const iframe = WidgetController.createWidgetIframe(
+    { network: 'mainnet', theme: 'dark', assetIn: 0, assetOut: 31566704 },
+    { height: '488px' },
+)
 document.body.appendChild(iframe)
 
-// Swap API functionality
-const quote = await peraSwap.createQuote({
-  providers: ['tinyman', 'vestige-v4'],
-  swapper_address: 'ABCDEF...',
-  swap_type: 'fixed-input',
-  asset_in_id: 0, // ALGO
-  asset_out_id: 31566704, // USDC
-  amount: '1000000', // 1 ALGO (in microAlgos)
-  slippage: '0.005' // 0.5%
-})
-
-// Prepare transactions for signing
-const transactions = await peraSwap.prepareTransactions(quote.results[0].quote_id_str)
-
-// ... Sign and submit transactions with your wallet ...
-// After successfully submitting to chain, report swap status:
-await peraSwap.updateSwapStatus(String(transactions.swap_id), {
-  status: 'in_progress',
-  submitted_transaction_ids: ['<txid-1>', '<txid-2>']
-})
-
-// Asset management
-const asset = await peraSwap.getAsset(31566704)
-const assets = await peraSwap.searchAssets('USDC')
-const availableAssets = await peraSwap.getAvailableAssets({ asset_in_id: 0 })
-
-// Switch networks
-peraSwap.updateNetwork('testnet')
-const testnetAsset = await peraSwap.getAsset(31566704)
+// Or just the URL, for your own <iframe src="...">
+const url = WidgetController.generateWidgetUrl({ theme: 'light' })
 ```
 
-> **Note**: The package uses native `fetch` API and has no external dependencies for HTTP requests. The `PeraSwap` class provides a unified interface for both widget generation and swap API operations.
+### Widget options
 
-## Configuration
+| Option            | Description                                            | Values                     | Default           |
+| ----------------- | ------------------------------------------------------ | -------------------------- | ----------------- |
+| `network`         | Algorand network                                       | `'mainnet'` \| `'testnet'` | `'mainnet'`       |
+| `theme`           | Widget theme                                           | `'light'` \| `'dark'`      | `'light'`         |
+| `assetIn`         | Input asset ID                                         | `number` \| `string`       | `0` (ALGO)        |
+| `assetOut`        | Output asset ID                                        | `number` \| `string`       | `31566704` (USDC) |
+| `iframeBg`        | Background color                                       | Hex color string           | `#FFFFFF`         |
+| `useParentSigner` | Sign transactions in the host page (see below)         | `boolean`                  | `false`           |
+| `accountAddress`  | Signer address, only used with `useParentSigner: true` | `string`                   | –                 |
 
-### Widget Configuration
+`createWidgetIframe(config, options)` also takes `width`, `height`, `className`,
+`id` and `title` for the iframe element.
 
-#### PeraSwap.generateWidgetUrl() Options
+### Signing in the host page (parent signer)
 
-| Parameter | Description | Values | Default |
-|-----------|-------------|--------|---------|
-| `network` | Algorand network | `'mainnet'` \| `'testnet'` | `'mainnet'` |
-| `theme` | Widget theme | `'light'` \| `'dark'` | `'light'` |
-| `assetIn` | Input asset ID | `number` \| `string` | `0` (ALGO) |
-| `assetOut` | Output asset ID | `number` \| `string` | `31566704` (USDC) |
-| `iframeBg` | Background color | Hex color string | `undefined` |
-| `useParentSigner` | Use parent signer | `boolean` | `false` |
-| `accountAddress` | Account address (required if useParentSigner=true) | `string` | `undefined` |
+With `useParentSigner: true` the widget doesn't connect a wallet itself; it asks
+the host page to sign. `WidgetController` handles that messaging for you:
 
+```ts
+import { WidgetController } from '@perawallet/swap'
 
+const url = WidgetController.generateWidgetUrl({
+    useParentSigner: true,
+    accountAddress: 'ABCDEF...',
+})
 
-### API Methods
+const controller = new WidgetController({
+    // txGroups are decoded algosdk Transaction[][]; resolve with the signed bytes
+    onTxnSignRequest: ({ txGroups }) =>
+        peraWallet.signTransaction(
+            txGroups.map(group => group.map(txn => ({ txn }))),
+        ),
+    onTxnSignRequestTimeout: () => console.warn('Signing timed out'),
+    onSwapSuccess: () => console.log('Swap completed'),
+})
 
-#### PeraSwap Class Methods (Swap API Operations)
-
-| Method | Description | Returns |
-|--------|-------------|---------|
-| `createQuote(body, signal?)` | Create swap quote | `Promise<{results: SwapQuote[]}>` |
-| `prepareTransactions(quoteId, depositAddress?)` | Get transaction groups | `Promise<PrepareTransactionsResponse>` |
-| `updateSwapStatus(swapId, body)` | Update swap status | `Promise<any>` |
-| `getAssets(params)` | Get assets by IDs or search | `Promise<GetAssetsResponse>` |
-| `getAsset(assetId)` | Get single asset by ID | `Promise<Asset \| null>` |
-| `searchAssets(query)` | Search assets by name | `Promise<Asset[]>` |
-| `getAvailableAssets(params)` | Get available swap assets | `Promise<{results: Asset[]}>` |
-| `getAlgoPrice()` | Get ALGO price in USD | `Promise<{exchange_price: string}>` |
-| `updateNetwork(network)` | Switch network | `void` |
-| `getNetwork()` | Get current network | `'mainnet' \| 'testnet'` |
-
-#### WidgetController Class Methods (Widget & Communication)
-
-| Method | Description | Returns |
-|--------|-------------|---------|
-| `generateWidgetUrl(config)` | Static method to generate widget URL | `string` |
-| `createWidgetIframe(config, options)` | Static method to create iframe element | `HTMLIFrameElement` |
-| `sendMessageToWidget(data)` | Static method to send messages to widget | `void` |
-| `addWidgetEventListeners()` | Add message event listeners | `void` |
-| `removeWidgetEventListeners()` | Remove message event listeners | `void` |
-
-### Type Definitions
-
-The package uses string literal types for better developer experience:
-
-```typescript
-type WidgetAppTheme = 'light' | 'dark'
-type WidgetNetwork = 'mainnet' | 'testnet'
-type SwapProvider = 'tinyman' | 'tinyman-swap-router' | 'vestige-v4'
-type SwapType = 'fixed-input'
+controller.addWidgetEventListeners()
+// When the widget is removed from the page:
+controller.removeWidgetEventListeners()
 ```
+
+If `onTxnSignRequest` rejects, the widget is told signing failed.
+
+For security, the controller only accepts messages from (and replies to) the
+Pera Swap widget origin, `https://swap-widget.perawallet.app`. If you host the
+widget elsewhere, pass `allowedOrigins` (exact `https:` origins; `http:` only
+for localhost).
+
+## Using the Swap API
+
+```ts
+import { PeraSwap, PeraSwapApiError } from '@perawallet/swap'
+
+const peraSwap = new PeraSwap({
+    network: 'mainnet',
+    referrerUrl: 'https://myapp.example', // optional, for attribution
+})
+
+const { results: quotes } = await peraSwap.createQuote({
+    providers: ['tinyman', 'vestige-v4'],
+    swapper_address: 'ABCDEF...',
+    swap_type: 'fixed-input',
+    asset_in_id: 0, // ALGO
+    asset_out_id: 31566704, // USDC
+    amount: '1000000', // 1 ALGO in microAlgos
+    slippage: '0.005', // 0.5%
+})
+
+const prepared = await peraSwap.prepareTransactions(quotes[0].quote_id_str)
+
+// ...sign and submit prepared.transaction_groups with your wallet...
+
+await peraSwap.updateSwapStatus(prepared.swap_id, {
+    status: 'in_progress',
+    submitted_transaction_ids: txIds,
+})
+```
+
+Report failures too, so Pera can track them:
+
+```ts
+await peraSwap.updateSwapStatus(prepared.swap_id, {
+    status: 'failed',
+    reason: 'user_cancelled', // 'blockchain_error' | 'invalid_submission' | 'other'
+})
+```
+
+### Methods
+
+Every request method accepts an optional `AbortSignal` as its last argument.
+
+| Method                                          | Returns                                |
+| ----------------------------------------------- | -------------------------------------- |
+| `createQuote(body)`                             | `Promise<{ results: SwapQuote[] }>`    |
+| `prepareTransactions(quoteId, depositAddress?)` | `Promise<PrepareTransactionsResponse>` |
+| `updateSwapStatus(swapId, body)`                | `Promise<unknown>`                     |
+| `getAssets({ asset_ids?, q? })`                 | `Promise<GetAssetsResponse>`           |
+| `getAsset(assetId)`                             | `Promise<Asset \| null>` ¹             |
+| `searchAssets(query)`                           | `Promise<Asset[]>` ¹                   |
+| `getAvailableAssets({ asset_in_id, q? })`       | `Promise<{ results: Asset[] }>`        |
+| `getAlgoPrice()`                                | `Promise<{ exchange_price: string }>`  |
+| `updateNetwork(network)` / `getNetwork()`       | `void` / `Network`                     |
+
+¹ Resolves to `null` / `[]` instead of throwing when the request fails.
 
 ### Constructor
 
-```typescript
-new PeraSwap(
-  network?: 'mainnet' | 'testnet',
-  referrerUrl?: string
-)
+```ts
+new PeraSwap({ network?, referrerUrl?, fetch? })
+new PeraSwap(network?, referrerUrl?) // positional form, still supported
 ```
 
-- `referrerUrl` is optional and can be used to attribute requests to your app.
-  When provided, `referrer_url` is forwarded with quote requests.
+Pass `fetch` to use a custom implementation (SSR, tests, retries).
 
-### Swap Status Reporting
+### Errors
 
-Call `updateSwapStatus` after you submit signed transactions to the network.
+Non-2xx responses throw a `PeraSwapApiError` with `status`, `url` and the parsed
+response `body`. Its `message` is the JSON-encoded body, as in earlier versions.
 
-```typescript
-// Success path: transactions submitted to mempool
-await peraSwap.updateSwapStatus(String(prepareResponse.swap_id), {
-  status: 'in_progress',
-  submitted_transaction_ids: txIds // string[] of submitted tx ids
-})
-
-// Failure path: something went wrong while submitting
-await peraSwap.updateSwapStatus(String(prepareResponse.swap_id), {
-  status: 'failed',
-  reason: 'blockchain_error' // or 'user_cancelled' | 'other'
-})
-```
-
-### Parent Signer Support
-
-The package supports parent signer functionality, allowing the parent website to handle transaction signing:
-
-```typescript
-import { WidgetController } from '@perawallet/swap'
-
-// Generate widget URL with parent signer
-const widgetUrl = WidgetController.generateWidgetUrl({
-  network: 'mainnet',
-  theme: 'dark',
-  assetIn: 0, // ALGO
-  assetOut: 31566704, // USDC
-  iframeBg: '#242424',
-  useParentSigner: true,
-  accountAddress: 'ABCDEF...'
-})
-
-// Set up controller for handling messages
-const controller = new WidgetController({
-  onTxnSignRequest: async ({ txGroups }) => {
-    // txGroups are already decoded Transaction[][] objects
-    // Sign transactions using your wallet
-    const signedTxns = await peraWallet.signTransaction(
-      txGroups.map(group => group.map(txn => ({ txn })))
-    )
-    return signedTxns // Return Uint8Array[]
-  },
-  onTxnSignRequestTimeout: () => {
-    console.log('Transaction signing timed out')
-  },
-  onSwapSuccess: (signedTxns) => {
-    console.log('Swap completed with signed transactions:', signedTxns)
-  }
-})
-
-// Add event listeners to handle widget messages
-controller.addWidgetEventListeners()
-
-// Don't forget to remove listeners when done
-controller.removeWidgetEventListeners()
+```ts
+try {
+    await peraSwap.createQuote(body)
+} catch (error) {
+    if (error instanceof PeraSwapApiError && error.status === 400) {
+        console.error(error.body)
+    }
+}
 ```
 
 ## Examples
 
-This package includes comprehensive examples demonstrating different integration approaches:
-
-### React Examples
-
-The React examples showcase four different ways to integrate the Pera Swap Widget:
-
-1. **Widget URL Generator** - Generate widget URLs for iframe embedding
-2. **Direct Iframe Creation** - Programmatically create and manage iframes
-3. **Custom UI with Swap API** - Build custom interfaces using the swap API
-4. **Parent Signer Integration** - Handle transaction signing in the parent application
-
-#### Running the React Examples
+[`examples/react`](examples/react) shows four integrations: widget URL, direct
+iframe, custom UI on the Swap API and parent signer. Live at
+https://perawallet.github.io/pera-swap/.
 
 ```bash
-# Navigate to examples directory
-cd examples/react
-
-# Install dependencies
-npm install
-
-# Start development server
-npm run dev
+pnpm install
+pnpm example:dev
 ```
-
-The examples are located in the `examples/react/` directory and demonstrate:
-- Widget configuration and customization
-- API integration patterns
-- Error handling and loading states
-- Parent signer functionality
-- TypeScript best practices
 
 ## Development
 
+See [CONTRIBUTING.md](CONTRIBUTING.md). In short:
+
 ```bash
-npm install
-npm run build
-npm run dev
+corepack enable
+pnpm install
+pnpm run setup   # git hooks
+pnpm check       # format, lint, typecheck, test, build
 ```
+
+## License
+
+MIT

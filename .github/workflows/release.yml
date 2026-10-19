@@ -1,34 +1,149 @@
-name: "🚀 release"
+name: Release / Publish
+
+# Publishes @perawallet/swap to npm whenever main has a version that isn't on
+# the registry yet. Bump "version" in package.json in the PR to release.
+#
+# Uses npm trusted publishing (OIDC), configured on npmjs.com for this
+# workflow file name — keep the file name `release.yml`.
+#
+# Third-party code (install, tests, build) only runs in the `build` job, which
+# has no publish credentials. The `publish` job only uploads the packed tarball.
 
 on:
   push:
-    branches:
-      - main
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release
+  cancel-in-progress: false
 
 jobs:
-  release:
-    name: 🚀 release
-    runs-on: ubuntu-latest
-    permissions:
-      id-token: write
-      contents: read
+  build:
+    name: Build and verify
+    # Manual runs can target any branch; only ever publish reviewed code.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    outputs:
+      publish: ${{ steps.version.outputs.publish }}
+      version: ${{ steps.version.outputs.version }}
+      tag: ${{ steps.version.outputs.tag }}
+      prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
-      - name: Setup repo
-        uses: actions/checkout@v3
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           persist-credentials: false
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v3
+      - name: Install pnpm
+        uses: pnpm/action-setup@fc06bc1257f339d1d5d8b3a19a8cae5388b55320 # v5.0.0
+
+      # No dependency cache here: a poisoned cache must not reach a release.
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
+        with:
+          node-version-file: .tool-versions
+
+      - name: Resolve version
+        id: version
+        run: |
+          set -euo pipefail
+          name="$(node -p "require('./package.json').name")"
+          version="$(node -p "require('./package.json').version")"
+          echo "version=${version}" >> "$GITHUB_OUTPUT"
+
+          if npm view "${name}@${version}" version > /dev/null 2>&1; then
+            echo "${name}@${version} is already published, skipping."
+            echo "publish=false" >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+          echo "publish=true" >> "$GITHUB_OUTPUT"
+
+          # Prereleases stay on `latest` until a stable version exists, then
+          # move to `next` so `npm install` never picks a prerelease.
+          stable="$(npm view "${name}" versions --json 2>/dev/null \
+            | node -e "const v=JSON.parse(require('fs').readFileSync(0,'utf8')||'[]');console.log([].concat(v).some(x=>!x.includes('-')))")"
+          if [[ "${version}" == *-* && "${stable}" == "true" ]]; then
+            echo "tag=next" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=latest" >> "$GITHUB_OUTPUT"
+          fi
+          if [[ "${version}" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Install dependencies
+        if: steps.version.outputs.publish == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Check
+        if: steps.version.outputs.publish == 'true'
+        run: pnpm check
+
+      - name: Pack
+        if: steps.version.outputs.publish == 'true'
+        run: |
+          pnpm build
+          pnpm pack --out package.tgz
+
+      - name: Upload package
+        if: steps.version.outputs.publish == 'true'
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: package
+          path: package.tgz
+          if-no-files-found: error
+          retention-days: 7
+
+  publish:
+    name: Publish to npm
+    needs: build
+    if: needs.build.outputs.publish == 'true'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    permissions:
+      id-token: write # npm trusted publishing + provenance
+    steps:
+      - name: Download package
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: package
+
+      # Node 24 ships npm >= 11.5.1, which trusted publishing requires.
+      - name: Setup Node
+        uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24.x
           registry-url: https://registry.npmjs.org
 
-      - name: Debug npm registry
-        run: npm config get registry
+      - name: Publish to npm
+        env:
+          NPM_TAG: ${{ needs.build.outputs.tag }}
+        run: npm publish package.tgz --provenance --access public --tag "${NPM_TAG}"
 
-      - name: Build app
-        run: npm ci && npm run build
-
-      - name: 🚀 publish
-        run: npm publish --access public --provenance
+  github-release:
+    name: Create GitHub release
+    needs: [build, publish]
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    permissions:
+      contents: write # create the GitHub release + tag
+    steps:
+      - name: Create GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.build.outputs.version }}
+          PRERELEASE: ${{ needs.build.outputs.prerelease }}
+        run: |
+          set -euo pipefail
+          flags=(--repo "${GITHUB_REPOSITORY}" --generate-notes --target "${GITHUB_SHA}" --title "v${VERSION}")
+          if [[ "${PRERELEASE}" == "true" ]]; then
+            flags+=(--prerelease)
+          fi
+          gh release create "v${VERSION}" "${flags[@]}"
