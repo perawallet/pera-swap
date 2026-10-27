@@ -21,12 +21,14 @@ export interface WidgetControllerConfig {
         txGroups: Transaction[][]
     }) => Promise<Uint8Array[]>
     onTxnSignRequestTimeout?: () => void
-    onSwapSuccess?: (response: Uint8Array[]) => void
+    /** Called with the transactions the widget signed and sent for the swap. */
+    onSwapSuccess?: (response: { signedTxns: Uint8Array[] }) => void
     /**
      * Origins the controller accepts messages from and replies to.
      * Defaults to the Pera Swap widget origin. Only change this if you host
-     * the widget yourself. Each entry must be an exact `https:` origin
-     * (`http:` is accepted for localhost); anything else throws.
+     * the widget yourself. Each entry must be an `https:` origin (`http:` is
+     * accepted for localhost) with no path; anything else, or an empty list,
+     * throws.
      */
     allowedOrigins?: string[]
 }
@@ -56,12 +58,18 @@ export class WidgetController {
     private readonly config: WidgetControllerConfig
     private readonly allowedOrigins: readonly string[]
     private isListening = false
+    private hasWarnedAboutOrigin = false
 
     constructor(config: WidgetControllerConfig = {}) {
         this.config = config
+        if (config.allowedOrigins?.length === 0) {
+            throw new TypeError(
+                'allowedOrigins is empty, so every widget message would be ignored. Omit it to use the Pera Swap widget origin.',
+            )
+        }
         this.allowedOrigins = (
             config.allowedOrigins ?? [PERA_SWAP_WIDGET_ORIGIN]
-        ).map(assertTrustedOrigin)
+        ).map(normalizeTrustedOrigin)
     }
 
     /** Generate a URL for the Pera Swap widget iframe. */
@@ -106,6 +114,7 @@ export class WidgetController {
         // Kept as a plain `includes` check on `event.origin` so static analysis
         // (CodeQL js/missing-origin-check) recognises it.
         if (!this.allowedOrigins.includes(event.origin)) {
+            this.warnAboutIgnoredSignRequest(event)
             return
         }
 
@@ -124,10 +133,30 @@ export class WidgetController {
                 break
             }
             case WidgetMessageType.SWAP_SUCCESS: {
-                this.config.onSwapSuccess?.(data.message as Uint8Array[])
+                this.config.onSwapSuccess?.(
+                    data.message as { signedTxns: Uint8Array[] },
+                )
                 break
             }
         }
+    }
+
+    // A widget served from an origin that isn't allowed (e.g. a staging
+    // widget) would otherwise wait for a signature with nothing in the console.
+    // Other pages' messages are ignored silently.
+    private warnAboutIgnoredSignRequest(event: MessageEvent): void {
+        if (
+            this.hasWarnedAboutOrigin ||
+            !isWidgetEvent(event.data) ||
+            event.data.type !== WidgetMessageType.TXN_SIGN_REQUEST
+        ) {
+            return
+        }
+        this.hasWarnedAboutOrigin = true
+        // oxlint-disable-next-line no-console -- the only signal an integrator gets
+        console.warn(
+            `@perawallet/swap: ignored a TXN_SIGN_REQUEST from ${event.origin}, which is not in allowedOrigins (${this.allowedOrigins.join(', ')}). Add it to allowedOrigins if you load the widget from there.`,
+        )
     }
 
     private async handleTxnSignRequest(
@@ -178,21 +207,30 @@ const LOCAL_HOSTNAMES = new Set(['localhost', '127.0.0.1', '[::1]'])
 
 // Signing requests are trusted by origin, so reject entries that would match
 // more than intended ('null' is shared by every sandboxed frame) or that can
-// be spoofed on the network (plain http to a remote host).
-function assertTrustedOrigin(origin: string): string {
-    let url: URL | undefined
+// be spoofed on the network (plain http to a remote host). A trailing slash or
+// upper-case host is normalised to the form `event.origin` uses.
+function normalizeTrustedOrigin(origin: string): string {
+    const invalid = (reason: string): TypeError =>
+        new TypeError(
+            `Invalid allowedOrigins entry "${origin}": ${reason}, such as "${PERA_SWAP_WIDGET_ORIGIN}"`,
+        )
+
+    let url: URL
     try {
         url = new URL(origin)
     } catch {
-        // Reported below.
+        throw invalid('expected an absolute https origin')
     }
     const isSecure =
-        url?.protocol === 'https:' ||
-        (url?.protocol === 'http:' && LOCAL_HOSTNAMES.has(url.hostname))
-    if (!isSecure || url?.origin !== origin) {
-        throw new TypeError(
-            `Invalid allowedOrigins entry "${origin}": expected an https origin such as "${PERA_SWAP_WIDGET_ORIGIN}"`,
-        )
+        url.protocol === 'https:' ||
+        (url.protocol === 'http:' && LOCAL_HOSTNAMES.has(url.hostname))
+    if (!isSecure) {
+        throw invalid('expected an https origin (http only for localhost)')
     }
-    return origin
+    // A bare origin serialises as the origin plus "/"; anything longer has a
+    // path, query, fragment or credentials.
+    if (url.href !== `${url.origin}/`) {
+        throw invalid('expected an origin with no path, query or fragment')
+    }
+    return url.origin
 }

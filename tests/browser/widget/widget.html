@@ -62,8 +62,9 @@
         timeout() {
             post('TXN_SIGN_REQUEST_TIMEOUT', {})
         },
-        success(txIds) {
-            post('SWAP_SUCCESS', txIds)
+        // The real widget posts the signed transactions it submitted.
+        success(signedTxnsBase64) {
+            post('SWAP_SUCCESS', { signedTxns: signedTxnsBase64.map(fromBase64) })
         },
     }
 </script>

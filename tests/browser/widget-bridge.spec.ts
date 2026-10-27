@@ -25,7 +25,7 @@ interface FakeWidget {
     ): Promise<SignReply | null>
     sendMalformed(timeoutMs?: number): Promise<string | null>
     timeout(): void
-    success(txIds: string[]): void
+    success(signedTxnsBase64: string[]): void
 }
 
 interface Host {
@@ -147,7 +147,7 @@ test.describe('WidgetController ↔ widget iframe (cross-origin)', () => {
         })
     })
 
-    test('delivers wallet errors that are not structured-cloneable', async ({
+    test('delivers wallet rejections that are not structured-cloneable', async ({
         page,
     }) => {
         const { widget } = await openHost(page)
@@ -160,8 +160,8 @@ test.describe('WidgetController ↔ widget iframe (cross-origin)', () => {
             GROUPS,
         )
 
-        // Structured cloning keeps the message but only built-in error names,
-        // so a custom `LedgerError` arrives as a plain `Error`.
+        // The rejection becomes an Error with its message. Structured cloning
+        // keeps only built-in error names, so `LedgerError` arrives as `Error`.
         expect(reply).toMatchObject({
             type: 'FAILED_TXN_SIGN',
             error: {
@@ -204,18 +204,18 @@ test.describe('WidgetController ↔ widget iframe (cross-origin)', () => {
 
         await untrusted.evaluate(() => {
             window.widget.timeout()
-            window.widget.success(['EVIL'])
+            window.widget.success([btoa('EVIL')])
         })
         await widget.evaluate(() => {
             window.widget.timeout()
-            window.widget.success(['TX1', 'TX2'])
+            window.widget.success([btoa('TX1'), btoa('TX2')])
         })
 
         await expect
             .poll(() => hostEvents(page))
             .toEqual([
                 { type: 'timeout' },
-                { type: 'success', detail: ['TX1', 'TX2'] },
+                { type: 'success', detail: [btoa('TX1'), btoa('TX2')] },
             ])
     })
 

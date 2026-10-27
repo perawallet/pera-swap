@@ -42,9 +42,11 @@ const config: WidgetControllerConfig = {
             throw new Error('User rejected the request')
         }
         if (behaviour === 'reject-uncloneable') {
-            // Wallet SDK errors often carry functions, which can't be cloned.
-            throw Object.assign(new Error('Ledger disconnected'), {
+            // Some wallet SDKs reject with plain objects that carry functions;
+            // posting one as-is throws DataCloneError.
+            return Promise.reject({
                 name: 'LedgerError',
+                message: 'Ledger disconnected',
                 retry: () => undefined,
             })
         }
@@ -52,7 +54,13 @@ const config: WidgetControllerConfig = {
         return txGroups.flat().map(txn => txn.toByte())
     },
     onTxnSignRequestTimeout: () => events.push({ type: 'timeout' }),
-    onSwapSuccess: detail => events.push({ type: 'success', detail }),
+    onSwapSuccess: ({ signedTxns }) =>
+        events.push({
+            type: 'success',
+            detail: signedTxns.map(bytes =>
+                btoa(String.fromCharCode(...bytes)),
+            ),
+        }),
 }
 
 const controller = new WidgetController(config)

@@ -46,7 +46,7 @@ export interface TxnSignRequestTimeoutMessage {
 export interface SwapSuccessMessage {
     message: {
         type: 'SWAP_SUCCESS'
-        data: Uint8Array[]
+        signedTxns: Uint8Array[]
     }
 }
 

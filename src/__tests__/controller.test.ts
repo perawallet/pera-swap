@@ -47,6 +47,9 @@ function dispatch(
 
 const flush = (): Promise<void> => new Promise(r => setTimeout(r, 0))
 
+// What the widget posts after a swap (pera-swap-widget-web parentSignerService).
+const SUCCESS = { signedTxns: [new Uint8Array([1])] }
+
 const controllers: WidgetController[] = []
 function listen(
     config: ConstructorParameters<typeof WidgetController>[0],
@@ -304,7 +307,7 @@ describe('WidgetController', () => {
 
         controller.removeWidgetEventListeners()
         controller.addWidgetEventListeners()
-        dispatch({ type: 'SWAP_SUCCESS', message: ['tx'] })
+        dispatch({ type: 'SWAP_SUCCESS', message: SUCCESS })
 
         expect(onSwapSuccess).toHaveBeenCalledOnce()
     })
@@ -316,7 +319,7 @@ describe('WidgetController', () => {
         const second = listen({ onSwapSuccess: b })
 
         second.removeWidgetEventListeners()
-        dispatch({ type: 'SWAP_SUCCESS', message: ['tx'] })
+        dispatch({ type: 'SWAP_SUCCESS', message: SUCCESS })
 
         expect(a).toHaveBeenCalledOnce()
         expect(b).not.toHaveBeenCalled()
@@ -328,10 +331,10 @@ describe('WidgetController', () => {
         listen({ onTxnSignRequestTimeout, onSwapSuccess })
 
         dispatch({ type: 'TXN_SIGN_REQUEST_TIMEOUT', message: {} })
-        dispatch({ type: 'SWAP_SUCCESS', message: ['tx'] })
+        dispatch({ type: 'SWAP_SUCCESS', message: SUCCESS })
 
         expect(onTxnSignRequestTimeout).toHaveBeenCalledOnce()
-        expect(onSwapSuccess).toHaveBeenCalledWith(['tx'])
+        expect(onSwapSuccess).toHaveBeenCalledWith(SUCCESS)
     })
 
     it('ignores messages from other origins', () => {
@@ -339,7 +342,7 @@ describe('WidgetController', () => {
         listen({ onSwapSuccess })
 
         dispatch(
-            { type: 'SWAP_SUCCESS', message: ['tx'] },
+            { type: 'SWAP_SUCCESS', message: SUCCESS },
             { origin: 'https://evil.example' },
         )
 
@@ -365,15 +368,84 @@ describe('WidgetController', () => {
     })
 
     it.each([
-        'null',
-        '*',
-        'swap-widget.perawallet.app',
+        ['null', 'expected an absolute https origin'],
+        ['*', 'expected an absolute https origin'],
+        ['swap-widget.perawallet.app', 'expected an absolute https origin'],
+        [
+            'http://swap-widget.perawallet.app',
+            'expected an https origin (http only for localhost)',
+        ],
+        ...[
+            'https://swap-widget.perawallet.app/widget',
+            'https://swap-widget.perawallet.app/?a=1',
+            'https://swap-widget.perawallet.app/#a',
+            'https://user@swap-widget.perawallet.app',
+        ].map(origin => [
+            origin,
+            'expected an origin with no path, query or fragment',
+        ]),
+    ])('rejects the untrusted allowed origin %j', (origin, reason) => {
+        const create = () => new WidgetController({ allowedOrigins: [origin] })
+        expect(create).toThrow(TypeError)
+        expect(create).toThrow(
+            `Invalid allowedOrigins entry "${origin}": ${reason}`,
+        )
+    })
+
+    it('rejects an empty allowedOrigins list', () => {
+        expect(() => new WidgetController({ allowedOrigins: [] })).toThrow(
+            /allowedOrigins is empty/,
+        )
+    })
+
+    it.each([
         'https://swap-widget.perawallet.app/',
-        'http://swap-widget.perawallet.app',
-    ])('rejects the untrusted allowed origin %j', origin => {
-        expect(
-            () => new WidgetController({ allowedOrigins: [origin] }),
-        ).toThrow(TypeError)
+        'HTTPS://Swap-Widget.PeraWallet.app',
+    ])('normalises the allowed origin %j', origin => {
+        const onSwapSuccess = vi.fn()
+        listen({ onSwapSuccess, allowedOrigins: [origin] })
+
+        dispatch({ type: 'SWAP_SUCCESS', message: SUCCESS })
+
+        expect(onSwapSuccess).toHaveBeenCalledOnce()
+    })
+
+    describe('signing requests from origins that are not allowed', () => {
+        afterEach(() => {
+            vi.restoreAllMocks()
+        })
+
+        it('warns once so a misconfigured origin is visible', () => {
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            listen({ onTxnSignRequest: vi.fn() })
+            const request = {
+                type: 'TXN_SIGN_REQUEST',
+                message: { txGroups: [[makeTxnBytes(1)]] },
+            }
+
+            dispatch(request, {
+                origin: 'https://swap-widget-staging.perawallet.app',
+            })
+            dispatch(request, { origin: 'https://evil.example' })
+
+            expect(warn).toHaveBeenCalledOnce()
+            expect(warn.mock.calls[0]![0]).toContain(
+                'https://swap-widget-staging.perawallet.app, which is not in allowedOrigins (https://swap-widget.perawallet.app)',
+            )
+        })
+
+        it('stays silent for other messages from other origins', () => {
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            listen({ onTxnSignRequest: vi.fn() })
+
+            dispatch(
+                { type: 'SWAP_SUCCESS', message: SUCCESS },
+                { origin: 'https://evil.example' },
+            )
+            dispatch('hello', { origin: 'https://evil.example' })
+
+            expect(warn).not.toHaveBeenCalled()
+        })
     })
 
     it('accepts custom allowed origins', () => {
@@ -381,10 +453,10 @@ describe('WidgetController', () => {
         listen({ onSwapSuccess, allowedOrigins: ['http://localhost:5173'] })
 
         dispatch(
-            { type: 'SWAP_SUCCESS', message: ['tx'] },
+            { type: 'SWAP_SUCCESS', message: SUCCESS },
             { origin: 'http://localhost:5173' },
         )
-        dispatch({ type: 'SWAP_SUCCESS', message: ['tx'] })
+        dispatch({ type: 'SWAP_SUCCESS', message: SUCCESS })
 
         expect(onSwapSuccess).toHaveBeenCalledOnce()
     })
@@ -408,7 +480,7 @@ describe('WidgetController', () => {
         const controller = listen({ onSwapSuccess })
 
         controller.removeWidgetEventListeners()
-        dispatch({ type: 'SWAP_SUCCESS', message: ['tx'] })
+        dispatch({ type: 'SWAP_SUCCESS', message: SUCCESS })
 
         expect(onSwapSuccess).not.toHaveBeenCalled()
     })
@@ -418,7 +490,7 @@ describe('WidgetController', () => {
         const controller = listen({ onSwapSuccess })
         controller.addWidgetEventListeners()
 
-        dispatch({ type: 'SWAP_SUCCESS', message: ['tx'] })
+        dispatch({ type: 'SWAP_SUCCESS', message: SUCCESS })
 
         expect(onSwapSuccess).toHaveBeenCalledOnce()
     })
