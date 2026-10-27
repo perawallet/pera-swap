@@ -29,7 +29,7 @@ export function buildUrl(
 /**
  * Minimal JSON-over-fetch client. Resolves with the parsed body, or
  * `undefined` for an empty response; rejects with {@link PeraSwapApiError}
- * for non-2xx responses.
+ * for non-2xx responses and for 2xx responses that aren't JSON.
  */
 export async function request<T>(
     baseUrl: string,
@@ -65,12 +65,20 @@ export async function request<T>(
         })
     }
 
-    return (await readBody(response)) as T
+    return (await readBody(response, url)) as T
 }
 
-async function readBody(response: Response): Promise<unknown> {
+async function readBody(response: Response, url: string): Promise<unknown> {
     const text = await response.text()
-    return text ? (JSON.parse(text) as unknown) : undefined
+    if (!text) {
+        return undefined
+    }
+    try {
+        return JSON.parse(text) as unknown
+    } catch {
+        // e.g. an HTML page from a proxy or CDN in front of the API.
+        throw new PeraSwapApiError({ status: response.status, url, body: text })
+    }
 }
 
 async function readErrorBody(response: Response): Promise<unknown> {

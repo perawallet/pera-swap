@@ -104,13 +104,19 @@ describe('request', () => {
         })
     })
 
-    it('rejects when a successful response is not JSON', async () => {
+    it('rejects with PeraSwapApiError when a successful response is not JSON', async () => {
         const fetch = vi
             .fn()
             .mockResolvedValue(new Response('<html>', { status: 200 }))
-        await expect(request(BASE, '/x/', { fetch })).rejects.toThrow(
-            SyntaxError,
+        const error = await request(BASE, '/x/', { fetch }).catch(
+            (e: unknown) => e,
         )
+        expect(error).toBeInstanceOf(PeraSwapApiError)
+        expect(error).toMatchObject({
+            status: 200,
+            url: `${BASE}/x/`,
+            body: '<html>',
+        })
     })
 
     it('propagates network errors from fetch', async () => {
