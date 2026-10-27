@@ -69,7 +69,8 @@ const controller = new WidgetController({
             txGroups.map(group => group.map(txn => ({ txn }))),
         ),
     onTxnSignRequestTimeout: () => console.warn('Signing timed out'),
-    onSwapSuccess: () => console.log('Swap completed'),
+    onSwapSuccess: ({ signedTxns }) =>
+        console.log(`Swap completed (${signedTxns.length} transactions)`),
 })
 
 controller.addWidgetEventListeners()
@@ -80,9 +81,11 @@ controller.removeWidgetEventListeners()
 If `onTxnSignRequest` rejects, the widget is told signing failed.
 
 For security, the controller only accepts messages from (and replies to) the
-Pera Swap widget origin, `https://swap-widget.perawallet.app`. If you host the
-widget elsewhere, pass `allowedOrigins` (exact `https:` origins; `http:` only
-for localhost).
+Pera Swap widget origin, `https://swap-widget.perawallet.app`. If you load the
+widget from anywhere else, including the staging widget at
+`https://swap-widget-staging.perawallet.app`, pass `allowedOrigins` (`https:`
+origins with no path; `http:` only for localhost). A signing request from an
+origin that isn't allowed is ignored, with a one-time `console.warn`.
 
 ## Using the Swap API
 
