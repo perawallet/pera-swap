@@ -111,6 +111,7 @@ const EXPECTED = {
 describe('published package', () => {
     it('ships only the build output and metadata', () => {
         expect(packedFiles).toEqual([
+            'LICENSE',
             'README.md',
             'dist/index.cjs',
             'dist/index.cjs.map',
