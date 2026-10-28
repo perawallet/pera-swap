@@ -4,11 +4,15 @@ export { createWidgetIframe, generateWidgetUrl } from './widget/url'
 export {
     WidgetMessageType,
     type FailedTxnSignMessage,
+    type HostToWidgetMessage,
     type SwapSuccessMessage,
+    type TxnSignReplyMessage,
     type TxnSignRequestMessage,
     type TxnSignRequestTimeoutMessage,
     type TxnSignResponseMessage,
+    type UpdateThemeMessage,
     type WidgetMessage,
+    type WidgetToHostMessage,
 } from './widget/messages'
 export { PeraSwapApiError } from './errors'
 export { PERA_SWAP_WIDGET_ORIGIN, PERA_SWAP_WIDGET_URL } from './constants'

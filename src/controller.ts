@@ -4,10 +4,11 @@ import { toError } from './errors'
 import type { WidgetConfig, WidgetIframeOptions } from './types'
 import {
     isTxGroups,
+    isUint8ArrayList,
     isWidgetEvent,
     WidgetMessageType,
-    type FailedTxnSignMessage,
-    type TxnSignResponseMessage,
+    type HostToWidgetMessage,
+    type TxnSignReplyMessage,
 } from './widget/messages'
 import { createWidgetIframe, generateWidgetUrl } from './widget/url'
 
@@ -20,6 +21,7 @@ export interface WidgetControllerConfig {
     onTxnSignRequest?: (data: {
         txGroups: Transaction[][]
     }) => Promise<Uint8Array[]>
+    /** @deprecated The widget never sends a timeout, so this is never called. Will be removed in the next major. */
     onTxnSignRequestTimeout?: () => void
     /** Called with the transactions the widget signed and sent for the swap. */
     onSwapSuccess?: (response: { signedTxns: Uint8Array[] }) => void
@@ -33,12 +35,11 @@ export interface WidgetControllerConfig {
     allowedOrigins?: string[]
 }
 
-type OutgoingMessage =
-    | TxnSignResponseMessage['message']
-    | FailedTxnSignMessage['message']
-
 interface SendMessageParams {
-    data: { message: { type: string; [key: string]: unknown } }
+    /** e.g. `{ type: 'UPDATE_THEME', message: 'dark' }`. */
+    data:
+        | HostToWidgetMessage
+        | { message: { type: string; [key: string]: unknown } }
     targetWindow?: Window | null
     /** Defaults to the Pera Swap widget origin. */
     targetOrigin?: string
@@ -85,7 +86,10 @@ export class WidgetController {
         return createWidgetIframe(config, options)
     }
 
-    /** Post a message to the widget iframe's window. */
+    /**
+     * Post a message to the widget iframe's window, e.g. `UPDATE_THEME`.
+     * Replies to signing requests are sent for you.
+     */
     static sendMessageToWidget({
         data,
         targetWindow,
@@ -128,14 +132,13 @@ export class WidgetController {
                 void this.handleTxnSignRequest(data.message, event)
                 break
             }
+            // Not sent by the Pera Swap widget; kept for compatibility.
             case WidgetMessageType.TXN_SIGN_REQUEST_TIMEOUT: {
                 this.config.onTxnSignRequestTimeout?.()
                 break
             }
             case WidgetMessageType.SWAP_SUCCESS: {
-                this.config.onSwapSuccess?.(
-                    data.message as { signedTxns: Uint8Array[] },
-                )
+                this.handleSwapSuccess(data.message)
                 break
             }
         }
@@ -159,6 +162,18 @@ export class WidgetController {
         )
     }
 
+    private handleSwapSuccess(message: unknown): void {
+        const { signedTxns } = message as { signedTxns?: unknown }
+        if (!isUint8ArrayList(signedTxns)) {
+            // oxlint-disable-next-line no-console -- a widget bug the integrator should see
+            console.warn(
+                '@perawallet/swap: ignored a SWAP_SUCCESS message without signedTxns.',
+            )
+            return
+        }
+        this.config.onSwapSuccess?.({ signedTxns })
+    }
+
     private async handleTxnSignRequest(
         message: unknown,
         event: MessageEvent,
@@ -169,7 +184,7 @@ export class WidgetController {
             return
         }
 
-        const reply = (outgoing: OutgoingMessage): void => {
+        const reply = (outgoing: TxnSignReplyMessage['message']): void => {
             WidgetController.sendMessageToWidget({
                 data: { message: outgoing },
                 targetWindow: event.source as Window | null,

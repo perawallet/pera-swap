@@ -461,6 +461,30 @@ describe('WidgetController', () => {
         expect(onSwapSuccess).toHaveBeenCalledOnce()
     })
 
+    describe('malformed SWAP_SUCCESS', () => {
+        afterEach(() => {
+            vi.restoreAllMocks()
+        })
+
+        it.each([{}, { signedTxns: 'x' }, { signedTxns: [[1, 2]] }])(
+            'ignores %j with a warning',
+            message => {
+                const warn = vi
+                    .spyOn(console, 'warn')
+                    .mockImplementation(() => {})
+                const onSwapSuccess = vi.fn()
+                listen({ onSwapSuccess })
+
+                dispatch({ type: 'SWAP_SUCCESS', message })
+
+                expect(onSwapSuccess).not.toHaveBeenCalled()
+                expect(warn).toHaveBeenCalledWith(
+                    expect.stringContaining('without signedTxns'),
+                )
+            },
+        )
+    })
+
     it('ignores malformed and unknown messages', () => {
         const onSwapSuccess = vi.fn()
         const onTxnSignRequestTimeout = vi.fn()

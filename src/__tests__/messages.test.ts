@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import {
     isTxGroups,
+    isUint8ArrayList,
     isWidgetEvent,
     WidgetMessageType,
 } from '../widget/messages'
@@ -20,6 +21,21 @@ describe('isWidgetEvent', () => {
         [{ type: 'SWAP_SUCCESS', message: '' }, false],
     ])('%j -> %s', (data, expected) => {
         expect(isWidgetEvent(data)).toBe(expected)
+    })
+})
+
+describe('isUint8ArrayList', () => {
+    const bytes = new Uint8Array([1])
+
+    it.each([
+        [[], true],
+        [[bytes, bytes], true],
+        [undefined, false],
+        [{}, false],
+        [[bytes, [1]], false],
+        [[bytes.buffer], false],
+    ])('%#: %s', (value, expected) => {
+        expect(isUint8ArrayList(value)).toBe(expected)
     })
 })
 
@@ -44,13 +60,14 @@ describe('isTxGroups', () => {
 })
 
 describe('WidgetMessageType', () => {
-    it('matches the wire protocol', () => {
+    it('lists every message type', () => {
         expect(WidgetMessageType).toEqual({
             TXN_SIGN_REQUEST: 'TXN_SIGN_REQUEST',
             TXN_SIGN_RESPONSE: 'TXN_SIGN_RESPONSE',
             FAILED_TXN_SIGN: 'FAILED_TXN_SIGN',
             TXN_SIGN_REQUEST_TIMEOUT: 'TXN_SIGN_REQUEST_TIMEOUT',
             SWAP_SUCCESS: 'SWAP_SUCCESS',
+            UPDATE_THEME: 'UPDATE_THEME',
         })
     })
 })
