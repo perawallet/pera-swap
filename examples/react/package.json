@@ -15,8 +15,8 @@
     "@perawallet/connect": "1.7.0",
     "@perawallet/swap": "workspace:*",
     "algosdk": "3.8.0",
-    "react": "19.3.0",
-    "react-dom": "19.3.0"
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
   },
   "devDependencies": {
     "@types/react": "19.3.0",
