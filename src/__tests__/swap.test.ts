@@ -51,6 +51,14 @@ describe('PeraSwap', () => {
                 referrer_url: 'https://ref.example',
             })
         })
+
+        it('rejects a positional referrerUrl after an options object', () => {
+            const create = () =>
+                // @ts-expect-error -- not allowed by the overloads; JS callers can still do it
+                new PeraSwap({ network: 'testnet' }, 'https://ref.example')
+            expect(create).toThrow(TypeError)
+            expect(create).toThrow(/inside the options object/)
+        })
     })
 
     it('uses the fetch from options and omits an unset referrer', async () => {

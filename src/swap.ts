@@ -41,6 +41,11 @@ export class PeraSwap {
         networkOrOptions: Network | PeraSwapOptions = 'mainnet',
         referrerUrl?: string,
     ) {
+        if (typeof networkOrOptions === 'object' && referrerUrl !== undefined) {
+            throw new TypeError(
+                'Pass referrerUrl inside the options object: new PeraSwap({ network, referrerUrl })',
+            )
+        }
         const options: PeraSwapOptions =
             typeof networkOrOptions === 'string'
                 ? { network: networkOrOptions, referrerUrl }
@@ -169,8 +174,9 @@ export class PeraSwap {
                 signal,
             )
             return response.results[0] ?? null
-        } catch {
-            signal?.throwIfAborted()
+        } catch (error) {
+            // Not `signal.throwIfAborted()`: it needs Chrome 100 / Safari 15.4.
+            if (signal?.aborted) throw error
             return null
         }
     }
@@ -180,8 +186,8 @@ export class PeraSwap {
         try {
             const response = await this.getAssets({ q: query }, signal)
             return response.results
-        } catch {
-            signal?.throwIfAborted()
+        } catch (error) {
+            if (signal?.aborted) throw error
             return []
         }
     }
