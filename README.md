@@ -45,6 +45,7 @@ const url = WidgetController.generateWidgetUrl({ theme: 'light' })
 | `iframeBg`        | Background color                                       | Hex color string           | `#FFFFFF`         |
 | `useParentSigner` | Sign transactions in the host page (see below)         | `boolean`                  | `false`           |
 | `accountAddress`  | Signer address, only used with `useParentSigner: true` | `string`                   | –                 |
+| `widgetUrl`       | Widget to load (see [other widgets](#other-widgets))   | URL string                 | Pera Swap widget  |
 
 `createWidgetIframe(config, options)` also takes `width`, `height`, `className`,
 `id` and `title` for the iframe element.
@@ -68,7 +69,6 @@ const controller = new WidgetController({
         peraWallet.signTransaction(
             txGroups.map(group => group.map(txn => ({ txn }))),
         ),
-    onTxnSignRequestTimeout: () => console.warn('Signing timed out'),
     onSwapSuccess: ({ signedTxns }) =>
         console.log(`Swap completed (${signedTxns.length} transactions)`),
 })
@@ -81,11 +81,43 @@ controller.removeWidgetEventListeners()
 If `onTxnSignRequest` rejects, the widget is told signing failed.
 
 For security, the controller only accepts messages from (and replies to) the
-Pera Swap widget origin, `https://swap-widget.perawallet.app`. If you load the
-widget from anywhere else, including the staging widget at
-`https://swap-widget-staging.perawallet.app`, pass `allowedOrigins` (`https:`
-origins with no path; `http:` only for localhost). A signing request from an
-origin that isn't allowed is ignored, with a one-time `console.warn`.
+Pera Swap widget origin, `https://swap-widget.perawallet.app`. A signing
+request from an origin that isn't allowed is ignored, with a one-time
+`console.warn`.
+
+### Other widgets
+
+To load another widget, such as the staging one, pass its URL as `widgetUrl`
+and its origin in `allowedOrigins` (`https:` origins with no path; `http:`
+only for localhost):
+
+```ts
+const STAGING_WIDGET = 'https://swap-widget-staging.perawallet.app'
+
+const iframe = WidgetController.createWidgetIframe({
+    widgetUrl: STAGING_WIDGET,
+    network: 'testnet',
+    useParentSigner: true,
+    accountAddress: 'ABCDEF...',
+})
+const controller = new WidgetController({
+    allowedOrigins: [STAGING_WIDGET],
+    onTxnSignRequest: ({ txGroups }) => wallet.sign(txGroups),
+})
+```
+
+### Messaging the widget
+
+`WidgetController.sendMessageToWidget` posts a message to the widget. Use it to
+switch the theme without reloading the iframe:
+
+```ts
+WidgetController.sendMessageToWidget({
+    data: { type: 'UPDATE_THEME', message: 'dark' },
+    targetWindow: iframe.contentWindow,
+    // targetOrigin: STAGING_WIDGET, // defaults to the Pera Swap widget origin
+})
+```
 
 ## Using the Swap API
 
@@ -151,7 +183,8 @@ new PeraSwap({ network?, referrerUrl?, fetch? })
 new PeraSwap(network?, referrerUrl?) // positional form, still supported
 ```
 
-Pass `fetch` to use a custom implementation (SSR, tests, retries).
+Pass `fetch` to use a custom implementation (SSR, tests, retries). The two
+forms can't be mixed: a `referrerUrl` after an options object throws.
 
 ### Errors
 

@@ -2,19 +2,56 @@
 
 ## 1.0.0-beta.5
 
+This release has breaking changes. Most apps need at most one of the steps
+below; check each one before upgrading from `1.0.0-beta.4` or earlier.
+
 ### Breaking
 
-- `algosdk` is now a peer dependency (`^3.2.0`) so decoded `Transaction`s come
-  from the same copy your wallet uses. Install it alongside this package if
-  your package manager doesn't install peers automatically.
-- `WidgetController` ignores messages from any origin other than the Pera Swap
-  widget, and `sendMessageToWidget` no longer posts to `'*'`. Pass
-  `allowedOrigins` / `targetOrigin` if you load the widget from another origin.
-- Requires Node.js 20 or newer.
-- `onSwapSuccess` is typed with what the widget actually sends,
-  `{ signedTxns: Uint8Array[] }`, instead of `Uint8Array[]`. The value passed
-  at runtime is unchanged. `SwapSuccessMessage`'s payload field is renamed
-  from `data` to `signedTxns` to match.
+**Widget loaded from another origin stops signing.** `WidgetController` now
+only accepts messages from `https://swap-widget.perawallet.app` and replies to
+that origin instead of `'*'` (see Security). If you load the widget from
+anywhere else, the staging widget included, signing requests are ignored with
+a one-time `console.warn`.
+
+→ Pass the widget's origin in `allowedOrigins`, and its URL as `widgetUrl`.
+`sendMessageToWidget` also posts to the Pera Swap widget origin; pass
+`targetOrigin` for another widget.
+
+**Widget embedded without `network` moves from testnet to mainnet.**
+`generateWidgetUrl` / `createWidgetIframe` now always send `network`,
+defaulting to `mainnet` as documented. The widget itself defaults to testnet,
+so a widget embedded without `network` used to load on testnet.
+
+→ Pass `network: 'testnet'` to stay on testnet.
+
+**`algosdk` is a peer dependency** (`^3.2.0`), so decoded `Transaction`s come
+from the same copy your wallet uses.
+
+→ npm 7+ and pnpm install it for you. With Yarn, add `algosdk` to your
+dependencies.
+
+**Node.js 20 or newer is required.**
+
+**`new PeraSwap(options, referrerUrl)` throws a `TypeError`** instead of
+silently ignoring `referrerUrl`. TypeScript never allowed this call.
+
+→ Pass `referrerUrl` inside the options object.
+
+**TypeScript only (runtime values are unchanged):**
+
+- `onSwapSuccess` receives `{ signedTxns: Uint8Array[] }`, which is what the
+  widget has always sent, instead of the `Uint8Array[]` it was typed with.
+  `SwapSuccessMessage`'s payload field is `signedTxns` instead of `data`.
+
+    → Destructure the argument: `onSwapSuccess: ({ signedTxns }) => ...`.
+
+- The widget → host message types (`TxnSignRequestMessage`,
+  `SwapSuccessMessage`, `TxnSignRequestTimeoutMessage`) describe what the
+  widget posts, `{ type, message }`, instead of `{ message: { type, ... } }`.
+  Code that reads `event.data.message.type` on a `WidgetMessage` no longer
+  compiles.
+
+    → Type a reply listener with `TxnSignReplyMessage`.
 
 ### Security
 
@@ -48,6 +85,10 @@
   "Unable to read error details".
 - A successful response whose body isn't JSON (e.g. an HTML page from a proxy)
   rejects with `PeraSwapApiError` instead of a bare `SyntaxError`.
+- `getAsset` / `searchAssets` no longer use `AbortSignal.throwIfAborted()`, so
+  they work in browsers older than Chrome 100 / Safari 15.4.
+- A `SWAP_SUCCESS` message without valid `signedTxns` is ignored with a
+  `console.warn` instead of reaching `onSwapSuccess`.
 
 ### Added
 
@@ -62,6 +103,17 @@
   `WidgetMessageType`, `PERA_SWAP_WIDGET_ORIGIN`, `PERA_SWAP_WIDGET_URL`, and
   named response types (`CreateQuoteResponse`, `AlgoPriceResponse`, ...).
 - `createWidgetIframe` sets an accessible `title` (configurable).
+- `widgetUrl` widget option, to load another widget such as the staging one.
+- `UPDATE_THEME` message type and the `UpdateThemeMessage`,
+  `WidgetToHostMessage`, `HostToWidgetMessage` and `TxnSignReplyMessage`
+  types. `sendMessageToWidget` accepts `UPDATE_THEME`.
+
+### Deprecated
+
+- `onTxnSignRequestTimeout`, `TXN_SIGN_REQUEST_TIMEOUT` and
+  `TxnSignRequestTimeoutMessage`: the widget never sends a timeout, so the
+  callback is never called. They will be removed in the next major.
+- `WidgetMessage`, in favour of the direction-specific types above.
 
 ### Changed
 

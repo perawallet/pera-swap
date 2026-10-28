@@ -80,7 +80,7 @@ describe('swap flow against the Pera API', () => {
             referrerUrl: REFERRER,
         })
 
-        // 1. Quote — only requested providers, best output first.
+        // 1. Quote — only requested providers; the caller picks the best.
         const { results } = await peraSwap.createQuote(quoteBody(swapper))
         expect(results.map(q => q.provider)).toEqual(['tinyman', 'vestige-v4'])
         const best = [...results].sort(
