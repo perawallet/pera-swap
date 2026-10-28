@@ -67,12 +67,11 @@ const controller = new WidgetController(config)
 controller.addWidgetEventListeners()
 
 const app = document.getElementById('app')!
+// Load the fake widget instead of production.
 const widgetFrame = createWidgetIframe(
-    { useParentSigner: true },
+    { widgetUrl: `${widgetOrigin}/widget.html`, useParentSigner: true },
     { id: 'widget' },
 )
-// Point the iframe at the fake widget instead of production.
-widgetFrame.src = `${widgetOrigin}/widget.html`
 const untrustedFrame = document.createElement('iframe')
 untrustedFrame.id = 'untrusted'
 untrustedFrame.src = `${untrustedOrigin}/widget.html`

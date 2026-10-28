@@ -12,12 +12,11 @@ import {
 
 /** Build the URL to load the Pera Swap widget with the given configuration. */
 export function generateWidgetUrl(config: WidgetConfig = {}): string {
-    const url = new URL(PERA_SWAP_WIDGET_URL)
+    const url = new URL(config.widgetUrl ?? PERA_SWAP_WIDGET_URL)
     const params = url.searchParams
 
-    if (config.network) {
-        params.set(SwapWidgetSearchParamKey.NETWORK, config.network)
-    }
+    // Always sent: the widget's own default is testnet, not mainnet.
+    params.set(SwapWidgetSearchParamKey.NETWORK, config.network ?? 'mainnet')
     if (config.theme) {
         params.set(SwapWidgetSearchParamKey.THEME, config.theme)
     }

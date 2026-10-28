@@ -91,7 +91,7 @@ async function openHost(
 const hostEvents = (page: Page) => page.evaluate(() => window.host.events)
 
 test.describe('WidgetController ↔ widget iframe (cross-origin)', () => {
-    test('signs a request from the widget and replies only to the widget origin', async ({
+    test('signs a request from the widget and replies to the widget', async ({
         page,
     }) => {
         const { widget, untrusted } = await openHost(page)
@@ -245,7 +245,7 @@ test.describe('WidgetController ↔ widget iframe (cross-origin)', () => {
         await openHost(page)
         await expect(page.locator('#widget')).toHaveAttribute(
             'src',
-            `${WIDGET_ORIGIN}/widget.html`,
+            `${WIDGET_ORIGIN}/widget.html?network=mainnet&useParentSigner=true`,
         )
         await expect(page.locator('#untrusted')).toHaveAttribute(
             'src',

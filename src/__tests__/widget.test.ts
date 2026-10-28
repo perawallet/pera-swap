@@ -4,8 +4,19 @@ import { createWidgetIframe, generateWidgetUrl } from '../widget/url'
 import { WidgetController } from '../controller'
 
 describe('generateWidgetUrl', () => {
-    it('returns the bare widget URL without config', () => {
-        expect(generateWidgetUrl()).toBe('https://swap-widget.perawallet.app/')
+    it('defaults to mainnet, since the widget itself defaults to testnet', () => {
+        expect(generateWidgetUrl()).toBe(
+            'https://swap-widget.perawallet.app/?network=mainnet',
+        )
+    })
+
+    it('loads another widget from widgetUrl', () => {
+        expect(
+            generateWidgetUrl({
+                widgetUrl: 'https://swap-widget-staging.perawallet.app',
+                network: 'testnet',
+            }),
+        ).toBe('https://swap-widget-staging.perawallet.app/?network=testnet')
     })
 
     it('encodes every option', () => {
@@ -51,7 +62,10 @@ describe('generateWidgetUrl', () => {
                 useParentSigner: false,
             }),
         )
-        expect(Object.fromEntries(url.searchParams)).toEqual({ assetIn: '0' })
+        expect(Object.fromEntries(url.searchParams)).toEqual({
+            network: 'mainnet',
+            assetIn: '0',
+        })
     })
 
     it('is exposed as a WidgetController static for compatibility', () => {
@@ -65,7 +79,9 @@ describe('createWidgetIframe', () => {
     it('applies defaults', () => {
         const iframe = WidgetController.createWidgetIframe()
 
-        expect(iframe.src).toBe('https://swap-widget.perawallet.app/')
+        expect(iframe.src).toBe(
+            'https://swap-widget.perawallet.app/?network=mainnet',
+        )
         expect(iframe.width).toBe('100%')
         expect(iframe.height).toBe('488px')
         expect(iframe.title).toBe('Pera Swap')

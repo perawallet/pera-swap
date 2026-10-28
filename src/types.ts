@@ -40,7 +40,14 @@ export type WidgetAppTheme = 'light' | 'dark'
 export type WidgetNetwork = Network
 
 export interface WidgetConfig {
-    /** The preferred Algorand network that will be used by the widget */
+    /**
+     * Widget to load. Defaults to `PERA_SWAP_WIDGET_URL`. When you load any
+     * other widget (e.g. the staging one), also add its origin to
+     * `WidgetController`'s `allowedOrigins`.
+     */
+    widgetUrl?: string
+
+    /** The Algorand network the widget uses. Defaults to `mainnet`. */
     network?: WidgetNetwork
 
     /** The preferred theme of the widget */

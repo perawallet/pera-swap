@@ -103,7 +103,7 @@ const EXPECTED = {
         'generateWidgetUrl',
     ],
     network: 'testnet',
-    url: 'https://swap-widget.perawallet.app/?theme=dark&assetIn=0',
+    url: 'https://swap-widget.perawallet.app/?network=mainnet&theme=dark&assetIn=0',
     error: true,
     controller: 'function',
 }
