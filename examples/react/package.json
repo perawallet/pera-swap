@@ -12,9 +12,9 @@
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
-    "@perawallet/connect": "1.7.0",
+    "@perawallet/connect": "1.9.0",
     "@perawallet/swap": "workspace:*",
-    "algosdk": "3.8.0",
+    "algosdk": "3.9.0",
     "react": "19.3.0",
     "react-dom": "19.3.0"
   },
