@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from 'react'
 import {
+    PERA_SWAP_WIDGET_URL,
     WidgetController,
     type WidgetNetwork,
     type WidgetAppTheme,
@@ -9,9 +10,17 @@ import peraWalletManager from '../context/PeraWalletManager'
 
 type StatusType = 'info' | 'success' | 'error'
 
+const WIDGET_URLS = {
+    production: PERA_SWAP_WIDGET_URL,
+    staging: 'https://swap-widget-staging.perawallet.app',
+}
+
+type WidgetEnvironment = keyof typeof WIDGET_URLS
+
 export default function ParentSignerExample() {
     const { isConnected, accountAddress: walletAddress } = useWallet()
     const [config, setConfig] = useState({
+        widget: 'production' as WidgetEnvironment,
         network: 'mainnet' as WidgetNetwork,
         theme: 'light' as WidgetAppTheme,
         assetIn: '0', // ALGO
@@ -20,6 +29,9 @@ export default function ParentSignerExample() {
         accountAddress: '',
     })
     const [widgetUrl, setWidgetUrl] = useState<string>('')
+    const iframeRef = useRef<HTMLIFrameElement>(null)
+    // Theme the loaded widget shows; the URL sets it when the widget loads.
+    const widgetThemeRef = useRef(config.theme)
     const [status, setStatus] = useState<{
         text: string
         type: StatusType
@@ -47,6 +59,8 @@ export default function ParentSignerExample() {
         }
 
         const controller = new WidgetController({
+            // The controller only trusts the widget it was told about.
+            allowedOrigins: [new URL(widgetUrl).origin],
             onTxnSignRequest: async ({ txGroups }) => {
                 report(
                     'Received transaction signing request from widget',
@@ -76,17 +90,35 @@ export default function ParentSignerExample() {
                     throw error
                 }
             },
-            onTxnSignRequestTimeout: () => {
-                report('Transaction signing request timed out', 'error')
-            },
-            onSwapSuccess: () => {
-                report('Swap completed successfully!', 'success')
+            onSwapSuccess: ({ signedTxns }) => {
+                report(
+                    `Swap completed successfully (${signedTxns.length} transactions)`,
+                    'success',
+                )
             },
         })
 
         controller.addWidgetEventListeners()
         return () => controller.removeWidgetEventListeners()
     }, [widgetUrl])
+
+    // Switch the loaded widget's theme without reloading it.
+    useEffect(() => {
+        const targetWindow = iframeRef.current?.contentWindow
+        if (
+            !widgetUrl ||
+            !targetWindow ||
+            config.theme === widgetThemeRef.current
+        ) {
+            return
+        }
+        WidgetController.sendMessageToWidget({
+            data: { type: 'UPDATE_THEME', message: config.theme },
+            targetWindow,
+            targetOrigin: new URL(widgetUrl).origin,
+        })
+        widgetThemeRef.current = config.theme
+    }, [config.theme, widgetUrl])
 
     const generateWidgetUrl = () => {
         if (config.useParentSigner && !config.accountAddress) {
@@ -97,8 +129,10 @@ export default function ParentSignerExample() {
             return
         }
 
+        widgetThemeRef.current = config.theme
         setWidgetUrl(
             WidgetController.generateWidgetUrl({
+                widgetUrl: WIDGET_URLS[config.widget],
                 network: config.network,
                 theme: config.theme,
                 assetIn: Number(config.assetIn),
@@ -141,6 +175,21 @@ export default function ParentSignerExample() {
             <div className='config-section'>
                 <h3>Configuration</h3>
                 <div className='config-grid'>
+                    <div>
+                        <label>Widget:</label>
+                        <select
+                            value={config.widget}
+                            onChange={e =>
+                                setConfig({
+                                    ...config,
+                                    widget: e.target.value as WidgetEnvironment,
+                                })
+                            }
+                        >
+                            <option value='production'>Production</option>
+                            <option value='staging'>Staging</option>
+                        </select>
+                    </div>
                     <div>
                         <label>Network:</label>
                         <select
@@ -267,6 +316,7 @@ export default function ParentSignerExample() {
                     <div className='iframe-preview'>
                         <h4>Widget Preview:</h4>
                         <iframe
+                            ref={iframeRef}
                             src={widgetUrl}
                             width='100%'
                             height='488px'

@@ -12,6 +12,8 @@ https://perawallet.github.io/pera-swap/.
 
 Example 4 uses [`@perawallet/connect`](https://github.com/perawallet/connect)
 for signing; connect your wallet with the button in the top-right corner first.
+It can also load the staging widget (`widgetUrl` plus `allowedOrigins`) and
+switches the theme of a loaded widget without reloading it (`UPDATE_THEME`).
 
 ## Running
 
