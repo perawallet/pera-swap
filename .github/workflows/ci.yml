@@ -137,14 +137,14 @@ jobs:
       # (same approach as pera-react-native).
       - name: pnpm audit (runtime)
         run: >
-          pnpm dlx --config.minimumReleaseAge=0 pnpm@11.13.0
+          pnpm dlx --config.minimumReleaseAge=0 pnpm@11.28.6
           --pm-on-fail=ignore --config.manage-package-manager-versions=false
           audit --prod --audit-level=moderate
 
       - name: pnpm audit (all, informational)
         if: always()
         run: >
-          pnpm dlx --config.minimumReleaseAge=0 pnpm@11.13.0
+          pnpm dlx --config.minimumReleaseAge=0 pnpm@11.28.6
           --pm-on-fail=ignore --config.manage-package-manager-versions=false
           audit --audit-level=low || true
 

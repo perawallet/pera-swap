@@ -13,7 +13,7 @@ export default defineConfig({
                     name: 'unit',
                     // Files that need a DOM opt in with `// @vitest-environment jsdom`.
                     environment: 'node',
-                    include: ['src/**/*.test.ts'],
+                    include: ['src/**/*.test.ts', 'tools/**/*.test.ts'],
                 },
             },
             {

@@ -24,8 +24,6 @@ concurrency:
 jobs:
   build:
     name: Build and verify
-    # Manual runs can target any branch; only ever publish reviewed code.
-    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     outputs:
@@ -34,6 +32,13 @@ jobs:
       tag: ${{ steps.version.outputs.tag }}
       prerelease: ${{ steps.version.outputs.prerelease }}
     steps:
+      # Manual runs can target any branch; only ever publish reviewed code.
+      - name: Require main
+        if: github.ref != 'refs/heads/main'
+        run: |
+          echo "::error::Releases only run from main, not ${GITHUB_REF}."
+          exit 1
+
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
@@ -55,6 +60,11 @@ jobs:
           name="$(node -p "require('./package.json').name")"
           version="$(node -p "require('./package.json').version")"
           echo "version=${version}" >> "$GITHUB_OUTPUT"
+          if [[ "${version}" == *-* ]]; then
+            echo "prerelease=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "prerelease=false" >> "$GITHUB_OUTPUT"
+          fi
 
           # Any lookup failure counts as "not published": publishing an
           # existing version then fails loudly instead of being skipped.
@@ -76,11 +86,21 @@ jobs:
           else
             echo "tag=latest" >> "$GITHUB_OUTPUT"
           fi
-          if [[ "${version}" == *-* ]]; then
-            echo "prerelease=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "prerelease=false" >> "$GITHUB_OUTPUT"
-          fi
+
+      # Also on a re-run, which may only need the GitHub release. Runs before
+      # publishing so a missing CHANGELOG entry stops the release.
+      - name: Release notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        run: node tools/release-notes.mjs "${VERSION}" > release-notes.md
+
+      - name: Upload release notes
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: release-notes
+          path: release-notes.md
+          if-no-files-found: error
+          retention-days: 7
 
       - name: Install dependencies
         if: steps.version.outputs.publish == 'true'
@@ -134,11 +154,23 @@ jobs:
   github-release:
     name: Create GitHub release
     needs: [build, publish]
+    # Runs after a publish, and on a re-run of the same commit after the
+    # version reached npm (e.g. the release step failed the first time).
+    if: >-
+      !cancelled() && needs.build.result == 'success' &&
+      (needs.publish.result == 'success' ||
+      (needs.publish.result == 'skipped' && github.run_attempt > 1))
     runs-on: ubuntu-24.04
     timeout-minutes: 5
     permissions:
       contents: write # create the GitHub release + tag
     steps:
+      - name: Download release notes
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          name: release-notes
+
+      # The CHANGELOG section comes first; --generate-notes appends the PR list.
       - name: Create GitHub release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -146,7 +178,11 @@ jobs:
           PRERELEASE: ${{ needs.build.outputs.prerelease }}
         run: |
           set -euo pipefail
-          flags=(--repo "${GITHUB_REPOSITORY}" --generate-notes --target "${GITHUB_SHA}" --title "v${VERSION}")
+          if gh release view "v${VERSION}" --repo "${GITHUB_REPOSITORY}" > /dev/null 2>&1; then
+            echo "Release v${VERSION} already exists, skipping."
+            exit 0
+          fi
+          flags=(--repo "${GITHUB_REPOSITORY}" --notes-file release-notes.md --generate-notes --target "${GITHUB_SHA}" --title "v${VERSION}")
           if [[ "${PRERELEASE}" == "true" ]]; then
             flags+=(--prerelease)
           fi

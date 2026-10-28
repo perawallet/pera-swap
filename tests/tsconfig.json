@@ -14,6 +14,7 @@
   },
   "include": [
     "**/*.ts",
+    "../tools/**/*.ts",
     "../playwright.config.ts",
     "../vitest.config.ts",
     "../tsdown.config.ts"
