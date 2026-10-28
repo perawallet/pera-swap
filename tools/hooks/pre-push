@@ -1,0 +1,7 @@
+#!/bin/sh
+# Runs the same checks as CI before pushing. Install with `pnpm run setup`.
+# Skip in an emergency with `git push --no-verify`.
+
+set -e
+echo "Running pre-push checks (pnpm check)..."
+pnpm check

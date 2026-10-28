@@ -1,0 +1,89 @@
+import {
+    createWidgetIframe,
+    WidgetController,
+    type WidgetControllerConfig,
+} from '@perawallet/swap'
+
+// A dApp page embedding the widget with useParentSigner. Playwright reads and
+// drives it through `window.host`.
+
+type SignBehaviour = 'sign' | 'reject' | 'reject-uncloneable'
+
+interface HostEvent {
+    type: string
+    detail?: unknown
+}
+
+// Fixed origins (keep in sync with playwright.config.ts). Hard-coded rather
+// than read from the URL so the page never loads an attacker-chosen frame.
+const widgetOrigin = 'http://127.0.0.1:4302'
+const untrustedOrigin = 'http://localhost:4302'
+
+const events: HostEvent[] = []
+let behaviour: SignBehaviour = 'sign'
+
+const config: WidgetControllerConfig = {
+    allowedOrigins: [widgetOrigin],
+    onTxnSignRequest: async ({ txGroups }) => {
+        events.push({
+            type: 'sign-request',
+            detail: txGroups.map(group =>
+                group.map(txn => ({
+                    type: txn.type,
+                    sender: txn.sender.toString(),
+                    amount: String(
+                        txn.payment?.amount ?? txn.assetTransfer?.amount ?? '',
+                    ),
+                })),
+            ),
+        })
+
+        if (behaviour === 'reject') {
+            throw new Error('User rejected the request')
+        }
+        if (behaviour === 'reject-uncloneable') {
+            // Some wallet SDKs reject with plain objects that carry functions;
+            // posting one as-is throws DataCloneError.
+            return Promise.reject({
+                name: 'LedgerError',
+                message: 'Ledger disconnected',
+                retry: () => undefined,
+            })
+        }
+        // Stand-in for a wallet: echo the re-encoded transactions.
+        return txGroups.flat().map(txn => txn.toByte())
+    },
+    onTxnSignRequestTimeout: () => events.push({ type: 'timeout' }),
+    onSwapSuccess: ({ signedTxns }) =>
+        events.push({
+            type: 'success',
+            detail: signedTxns.map(bytes =>
+                btoa(String.fromCharCode(...bytes)),
+            ),
+        }),
+}
+
+const controller = new WidgetController(config)
+controller.addWidgetEventListeners()
+
+const app = document.getElementById('app')!
+// Load the fake widget instead of production.
+const widgetFrame = createWidgetIframe(
+    { widgetUrl: `${widgetOrigin}/widget.html`, useParentSigner: true },
+    { id: 'widget' },
+)
+const untrustedFrame = document.createElement('iframe')
+untrustedFrame.id = 'untrusted'
+untrustedFrame.src = `${untrustedOrigin}/widget.html`
+app.append(widgetFrame, untrustedFrame)
+
+Object.assign(window, {
+    host: {
+        events,
+        setBehaviour: (next: SignBehaviour) => {
+            behaviour = next
+        },
+        detach: () => controller.removeWidgetEventListeners(),
+        attach: () => controller.addWidgetEventListeners(),
+    },
+})
