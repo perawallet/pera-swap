@@ -15,8 +15,10 @@ import { createWidgetIframe, generateWidgetUrl } from './widget/url'
 export interface WidgetControllerConfig {
     /**
      * Called when the widget (loaded with `useParentSigner: true`) needs
-     * transactions signed. Resolve with the signed transactions in order, or
-     * reject to tell the widget signing failed.
+     * transactions signed. `txGroups` are whole groups, and the Pera API has
+     * already signed the transactions that aren't from your account: sign
+     * only yours and resolve with those signatures in group order, or reject
+     * to tell the widget signing failed.
      */
     onTxnSignRequest?: (data: {
         txGroups: Transaction[][]

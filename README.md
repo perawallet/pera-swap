@@ -58,16 +58,26 @@ the host page to sign. `WidgetController` handles that messaging for you:
 ```ts
 import { WidgetController } from '@perawallet/swap'
 
+const ACCOUNT = 'ABCDEF...'
+
 const url = WidgetController.generateWidgetUrl({
     useParentSigner: true,
-    accountAddress: 'ABCDEF...',
+    accountAddress: ACCOUNT,
 })
 
 const controller = new WidgetController({
-    // txGroups are decoded algosdk Transaction[][]; resolve with the signed bytes
+    // txGroups are whole, decoded algosdk Transaction[][]. The Pera API has
+    // already signed the transactions that aren't from your account: skip
+    // them and resolve with your account's signatures, in group order.
     onTxnSignRequest: ({ txGroups }) =>
         peraWallet.signTransaction(
-            txGroups.map(group => group.map(txn => ({ txn }))),
+            txGroups.map(group =>
+                group.map(txn =>
+                    txn.sender.toString() === ACCOUNT
+                        ? { txn }
+                        : { txn, signers: [] },
+                ),
+            ),
         ),
     onSwapSuccess: ({ signedTxns }) =>
         console.log(`Swap completed (${signedTxns.length} transactions)`),
@@ -78,7 +88,10 @@ controller.addWidgetEventListeners()
 controller.removeWidgetEventListeners()
 ```
 
-If `onTxnSignRequest` rejects, the widget is told signing failed.
+If `onTxnSignRequest` rejects, the widget is told signing failed. With Pera
+Connect 1.7 or later, asking the wallet to sign a transaction that isn't your
+account's (no `signers: []`) fails after the user approves: "Expected 8 signed
+transaction(s) from the wallet but received 3".
 
 For security, the controller only accepts messages from (and replies to) the
 Pera Swap widget origin, `https://swap-widget.perawallet.app`. A signing

@@ -39,11 +39,13 @@ export default function ParentSignerExample() {
 
     const report = (text: string, type: StatusType) => setStatus({ text, type })
 
-    // The signer callback outlives renders, so read the latest connection state from a ref.
+    // The signer callback outlives renders, so read the latest connection state from refs.
     const isConnectedRef = useRef(isConnected)
+    const walletAddressRef = useRef(walletAddress)
     useEffect(() => {
         isConnectedRef.current = isConnected
-    }, [isConnected])
+        walletAddressRef.current = walletAddress
+    }, [isConnected, walletAddress])
 
     // Update account address when wallet connects
     useEffect(() => {
@@ -75,9 +77,17 @@ export default function ParentSignerExample() {
                 }
 
                 try {
+                    // The Pera API already signed the transactions that aren't
+                    // from this account; Pera Connect must skip them
+                    // (`signers: []`) or it rejects the wallet's signatures.
                     const signedTxns = await peraWalletManager.signTransaction(
                         txGroups.map(transactions =>
-                            transactions.map(txn => ({ txn })),
+                            transactions.map(txn =>
+                                txn.sender.toString() ===
+                                walletAddressRef.current
+                                    ? { txn }
+                                    : { txn, signers: [] },
+                            ),
                         ),
                     )
                     report('Transactions signed successfully', 'success')
