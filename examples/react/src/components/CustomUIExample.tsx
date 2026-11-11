@@ -282,18 +282,15 @@ export default function CustomUIExample() {
 
                                     <div className='fees-section'>
                                         {/*
-                                          Both in ALGO, like the Pera Swap
-                                          widget. The exchange fee's unit
-                                          depends on the provider: the API
-                                          labels it asset_in base units, but
-                                          some providers report microALGO.
+                                          The exchange fee's unit depends on
+                                          the provider (asset_in base units
+                                          for some, microALGO for others), so
+                                          it is shown raw, as information only.
                                         */}
                                         <p>
                                             <strong>Exchange Fee:</strong>{' '}
-                                            {formatAmount(
-                                                quote.exchange_fee_amount,
-                                            )}{' '}
-                                            ALGO
+                                            {quote.exchange_fee_amount} base
+                                            units (provider-specific)
                                         </p>
                                         <p>
                                             <strong>Pera Fee:</strong>{' '}
