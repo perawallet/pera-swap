@@ -19,20 +19,32 @@ const nullableDecimal = (value: unknown): boolean =>
     value === null ||
     (typeof value === 'string' && /^-?\d+(\.\d+)?$/.test(value))
 
-function expectAsset(asset: Asset): void {
+// Quote assets and `getAvailableAssets` results carry no `is_verified` or
+// `type`; only the generic assets endpoint sends those.
+function expectSwapAsset(asset: Asset): void {
     expect(asset).toEqual(
         expect.objectContaining({
             asset_id: expect.any(Number),
             name: expect.any(String),
             unit_name: expect.any(String),
             fraction_decimals: expect.any(Number),
-            is_verified: expect.any(Boolean),
         }),
     )
     expect(['verified', 'unverified', 'suspicious']).toContain(
         asset.verification_tier,
     )
+    expect(asset.logo === null || typeof asset.logo === 'string').toBe(true)
     expect(nullableDecimal(asset.usd_value)).toBe(true)
+}
+
+function expectAsset(asset: Asset): void {
+    expectSwapAsset(asset)
+    expect(asset).toEqual(
+        expect.objectContaining({
+            is_verified: expect.any(Boolean),
+            type: expect.any(String),
+        }),
+    )
 }
 
 function expectQuote(quote: SwapQuote): void {
@@ -46,8 +58,8 @@ function expectQuote(quote: SwapQuote): void {
             pera_fee_amount: decimalString,
         }),
     )
-    expectAsset(quote.asset_in)
-    expectAsset(quote.asset_out)
+    expectSwapAsset(quote.asset_in)
+    expectSwapAsset(quote.asset_out)
 }
 
 describe.skipIf(!LIVE)('Pera API contract (live)', () => {
@@ -89,7 +101,7 @@ describe.skipIf(!LIVE)('Pera API contract (live)', () => {
                 asset_in_id: 0,
                 q: 'USDC',
             })
-            results.forEach(expectAsset)
+            results.forEach(expectSwapAsset)
             expect(results.some(a => a.asset_id === USDC_ID)).toBe(true)
         })
 

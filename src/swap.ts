@@ -14,6 +14,11 @@ import type {
     UpdateSwapStatusBody,
 } from './types'
 
+const EXACT_SWAP_ID_LIMIT = 50
+
+const isUnsafeInteger = (value: unknown): value is number =>
+    Number.isInteger(value) && !Number.isSafeInteger(value)
+
 export interface PeraSwapOptions {
     /** Defaults to `mainnet`. */
     network?: Network
@@ -34,6 +39,12 @@ export class PeraSwap {
     private network: Network
     private readonly referrerUrl: string | undefined
     private readonly fetchFn: FetchLike | undefined
+    // `swap_id` is a 63-bit id that `JSON.parse` rounds, so reporting with it
+    // targets a swap that doesn't exist. Bounded so a long-lived client
+    // doesn't grow with every swap.
+    private readonly exactSwapIds = new Map<number, string>()
+    private hasWarnedAboutUnsafeSwapId = false
+    private hasWarnedAboutDepositAddress = false
 
     constructor(options?: PeraSwapOptions)
     constructor(network?: Network, referrerUrl?: string)
@@ -95,6 +106,10 @@ export class PeraSwap {
     /**
      * Report the outcome of a swap after submitting (or failing to submit)
      * its transactions.
+     *
+     * @param swapId Pass `prepared.swap_id_str`. A `swap_id` number above
+     * 2^53 has lost precision; it is only resolved to the exact id when this
+     * instance prepared that swap.
      */
     updateSwapStatus(
         swapId: string | number,
@@ -102,7 +117,7 @@ export class PeraSwap {
         signal?: AbortSignal,
     ): Promise<unknown> {
         return this.request(
-            `/v2/dex-swap/swaps/${encodeURIComponent(swapId)}/`,
+            `/v2/dex-swap/swaps/${encodeURIComponent(this.resolveSwapId(swapId))}/`,
             {
                 method: 'PATCH',
                 body: {
@@ -115,13 +130,21 @@ export class PeraSwap {
         )
     }
 
-    /** Build the transaction groups for a quote. */
-    prepareTransactions(
+    /**
+     * Build the transaction groups for a quote.
+     *
+     * @param depositAddress Deprecated: ignored by the v2 API. No transfer
+     * to this address is added, and the output stays in the swapping account.
+     */
+    async prepareTransactions(
         quoteId: string,
         depositAddress?: string,
         signal?: AbortSignal,
     ): Promise<PrepareTransactionsResponse> {
-        return this.request<PrepareTransactionsResponse>(
+        if (depositAddress) {
+            this.warnAboutDepositAddress()
+        }
+        const response = await this.request<PrepareTransactionsResponse>(
             '/v2/dex-swap/prepare-transactions/',
             {
                 method: 'POST',
@@ -129,6 +152,8 @@ export class PeraSwap {
                 signal,
             },
         )
+        this.rememberExactSwapId(response)
+        return response
     }
 
     /** Assets that can be swapped from `asset_in_id`. */
@@ -163,7 +188,13 @@ export class PeraSwap {
         })
     }
 
-    /** Single asset by ID. Resolves to `null` if it can't be found or the request fails; rejects only when aborted. */
+    /**
+     * Single asset by ID. Resolves to `null` if it can't be found or the
+     * request fails; rejects only when aborted.
+     *
+     * ALGO (id `0`) is not an ASA, so `getAsset(0)` always resolves to
+     * `null`; use {@link PeraSwap.getAlgoPrice} for its USD price.
+     */
     async getAsset(
         assetId: number,
         signal?: AbortSignal,
@@ -190,6 +221,50 @@ export class PeraSwap {
             if (signal?.aborted) throw error
             return []
         }
+    }
+
+    private rememberExactSwapId(response: PrepareTransactionsResponse): void {
+        // An empty 2xx body resolves to `undefined`.
+        const swapId: unknown = response?.swap_id
+        const exactId: unknown = response?.swap_id_str
+        if (!isUnsafeInteger(swapId) || typeof exactId !== 'string') {
+            return
+        }
+        this.exactSwapIds.delete(swapId)
+        this.exactSwapIds.set(swapId, exactId)
+        if (this.exactSwapIds.size > EXACT_SWAP_ID_LIMIT) {
+            this.exactSwapIds.delete(this.exactSwapIds.keys().next().value!)
+        }
+    }
+
+    private resolveSwapId(swapId: string | number): string | number {
+        if (!isUnsafeInteger(swapId)) {
+            return swapId
+        }
+        const exactId = this.exactSwapIds.get(swapId)
+        if (exactId !== undefined) {
+            return exactId
+        }
+        if (!this.hasWarnedAboutUnsafeSwapId) {
+            this.hasWarnedAboutUnsafeSwapId = true
+            // oxlint-disable-next-line no-console -- the request below is likely to 404
+            console.warn(
+                `@perawallet/swap: swapId ${swapId} exceeds 2^53 and has lost precision. Pass prepared.swap_id_str to updateSwapStatus.`,
+            )
+        }
+        return swapId
+    }
+
+    // The v2 endpoint drops `deposit_address` without an error.
+    private warnAboutDepositAddress(): void {
+        if (this.hasWarnedAboutDepositAddress) {
+            return
+        }
+        this.hasWarnedAboutDepositAddress = true
+        // oxlint-disable-next-line no-console -- the only signal an integrator gets
+        console.warn(
+            '@perawallet/swap: prepareTransactions ignores depositAddress: the v2 API adds no transfer to it, and the output stays in the swapping account.',
+        )
     }
 
     private request<T>(

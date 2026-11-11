@@ -24,7 +24,6 @@ interface FormState {
     /** Percentage, e.g. `0.5` for 0.5% */
     slippage: string
     swapperAddress: string
-    depositAddress: string
 }
 
 // One client for the lifetime of the page; it holds no per-render state.
@@ -43,7 +42,6 @@ export default function CustomUIExample() {
         amount: '1000000', // 1 ALGO
         slippage: '0.5',
         swapperAddress: '',
-        depositAddress: '',
     })
     const [quotes, setQuotes] = useState<SwapQuote[]>([])
     const [selectedQuote, setSelectedQuote] = useState<SwapQuote | null>(null)
@@ -66,6 +64,21 @@ export default function CustomUIExample() {
             setError('Please enter a swapper address')
             return
         }
+        const slippageInput = formState.slippage.trim()
+        const slippagePercent = Number(slippageInput)
+        // The API takes a fraction with at most 4 decimal places, between
+        // 0.0001 and 0.9999. Validating the typed percent avoids sending
+        // float artefacts (0.7 / 100 is 0.006999999999999999) or silently
+        // rounding what the user typed.
+        if (
+            !/^\d+(\.\d{1,2})?$/.test(slippageInput) ||
+            !(slippagePercent >= 0.01 && slippagePercent <= 99.99)
+        ) {
+            setError(
+                'Slippage must be between 0.01 and 99.99 percent, with at most 2 decimal places',
+            )
+            return
+        }
 
         setLoading(true)
         setError('')
@@ -80,7 +93,7 @@ export default function CustomUIExample() {
                 asset_in_id: Number(formState.assetInId),
                 asset_out_id: Number(formState.assetOutId),
                 amount: formState.amount,
-                slippage: (Number(formState.slippage) / 100).toString(), // Convert percentage to decimal
+                slippage: (slippagePercent / 100).toFixed(4),
             })
             setQuotes(result.results)
         } catch (err) {
@@ -97,7 +110,6 @@ export default function CustomUIExample() {
         try {
             const result = await peraSwap.prepareTransactions(
                 quote.quote_id_str,
-                formState.depositAddress || undefined,
             )
             setPreparedTransactions(result)
             setSelectedQuote(quote)
@@ -174,21 +186,6 @@ export default function CustomUIExample() {
                                 )
                             }
                             placeholder='ABCDEF...'
-                            style={{ gridColumn: 'span 2' }}
-                        />
-                    </div>
-                    <div>
-                        <label>Deposit Address (Optional):</label>
-                        <input
-                            type='text'
-                            value={formState.depositAddress}
-                            onChange={e =>
-                                handleInputChange(
-                                    'depositAddress',
-                                    e.target.value,
-                                )
-                            }
-                            placeholder='Optional deposit address...'
                             style={{ gridColumn: 'span 2' }}
                         />
                     </div>
@@ -284,23 +281,26 @@ export default function CustomUIExample() {
                                     </div>
 
                                     <div className='fees-section'>
+                                        {/*
+                                          Both in ALGO, like the Pera Swap
+                                          widget. The exchange fee's unit
+                                          depends on the provider: the API
+                                          labels it asset_in base units, but
+                                          some providers report microALGO.
+                                        */}
                                         <p>
                                             <strong>Exchange Fee:</strong>{' '}
                                             {formatAmount(
                                                 quote.exchange_fee_amount,
-                                                quote.asset_out
-                                                    .fraction_decimals,
                                             )}{' '}
-                                            {quote.asset_out.unit_name}
+                                            ALGO
                                         </p>
                                         <p>
                                             <strong>Pera Fee:</strong>{' '}
                                             {formatAmount(
                                                 quote.pera_fee_amount,
-                                                quote.asset_out
-                                                    .fraction_decimals,
                                             )}{' '}
-                                            {quote.asset_out.unit_name}
+                                            ALGO
                                         </p>
                                     </div>
                                 </div>

@@ -106,16 +106,27 @@ only for localhost):
 
 ```ts
 const STAGING_WIDGET = 'https://swap-widget-staging.perawallet.app'
+const ACCOUNT = 'ABCDEF...'
 
 const iframe = WidgetController.createWidgetIframe({
     widgetUrl: STAGING_WIDGET,
     network: 'testnet',
     useParentSigner: true,
-    accountAddress: 'ABCDEF...',
+    accountAddress: ACCOUNT,
 })
 const controller = new WidgetController({
     allowedOrigins: [STAGING_WIDGET],
-    onTxnSignRequest: ({ txGroups }) => wallet.sign(txGroups),
+    // Sign only your account's transactions, as in the parent signer example.
+    onTxnSignRequest: ({ txGroups }) =>
+        peraWallet.signTransaction(
+            txGroups.map(group =>
+                group.map(txn =>
+                    txn.sender.toString() === ACCOUNT
+                        ? { txn }
+                        : { txn, signers: [] },
+                ),
+            ),
+        ),
 })
 ```
 
@@ -156,7 +167,8 @@ const prepared = await peraSwap.prepareTransactions(quotes[0].quote_id_str)
 
 // ...sign and submit prepared.transaction_groups with your wallet...
 
-await peraSwap.updateSwapStatus(prepared.swap_id, {
+// swap_id_str, not swap_id: swap ids exceed 2^53, so the number is rounded.
+await peraSwap.updateSwapStatus(prepared.swap_id_str ?? prepared.swap_id, {
     status: 'in_progress',
     submitted_transaction_ids: txIds,
 })
@@ -165,29 +177,46 @@ await peraSwap.updateSwapStatus(prepared.swap_id, {
 Report failures too, so Pera can track them:
 
 ```ts
-await peraSwap.updateSwapStatus(prepared.swap_id, {
+await peraSwap.updateSwapStatus(prepared.swap_id_str ?? prepared.swap_id, {
     status: 'failed',
     reason: 'user_cancelled', // 'blockchain_error' | 'invalid_submission' | 'other'
 })
 ```
 
+`reason` is required when `status` is `'failed'`; the API answers 400 without
+it.
+
+`pera_fee_amount` is in microALGO. `exchange_fee_amount` is in base units
+whose asset depends on the provider, so treat it as informational.
+
+Assets in quotes (`asset_in`, `asset_out`) and from `getAvailableAssets` have
+no `is_verified` or `type`; use `verification_tier`, which every endpoint
+sends. `logo` is `null` for assets without a logo.
+
 ### Methods
 
 Every request method accepts an optional `AbortSignal` as its last argument.
 
-| Method                                          | Returns                                |
-| ----------------------------------------------- | -------------------------------------- |
-| `createQuote(body)`                             | `Promise<{ results: SwapQuote[] }>`    |
-| `prepareTransactions(quoteId, depositAddress?)` | `Promise<PrepareTransactionsResponse>` |
-| `updateSwapStatus(swapId, body)`                | `Promise<unknown>`                     |
-| `getAssets({ asset_ids?, q? })`                 | `Promise<GetAssetsResponse>`           |
-| `getAsset(assetId)`                             | `Promise<Asset \| null>` ¹             |
-| `searchAssets(query)`                           | `Promise<Asset[]>` ¹                   |
-| `getAvailableAssets({ asset_in_id, q? })`       | `Promise<{ results: Asset[] }>`        |
-| `getAlgoPrice()`                                | `Promise<{ exchange_price: string }>`  |
-| `updateNetwork(network)` / `getNetwork()`       | `void` / `Network`                     |
+| Method                                          | Returns                                  |
+| ----------------------------------------------- | ---------------------------------------- |
+| `createQuote(body)`                             | `Promise<{ results: SwapQuote[] }>`      |
+| `prepareTransactions(quoteId, depositAddress?)` | `Promise<PrepareTransactionsResponse>` ² |
+| `updateSwapStatus(swapId, body)`                | `Promise<unknown>`                       |
+| `getAssets({ asset_ids?, q? })`                 | `Promise<GetAssetsResponse>`             |
+| `getAsset(assetId)`                             | `Promise<Asset \| null>` ¹               |
+| `searchAssets(query)`                           | `Promise<Asset[]>` ¹                     |
+| `getAvailableAssets({ asset_in_id, q? })`       | `Promise<{ results: Asset[] }>`          |
+| `getAlgoPrice()`                                | `Promise<{ exchange_price: string }>`    |
+| `updateNetwork(network)` / `getNetwork()`       | `void` / `Network`                       |
 
-¹ Resolves to `null` / `[]` instead of throwing when the request fails.
+¹ Resolves to `null` / `[]` instead of throwing when the request fails. ALGO
+(id `0`) is not an ASA: `getAsset(0)` always resolves to `null`, and
+`getAssets({ asset_ids: ['0'] })` / `searchAssets('ALGO')` don't return it
+either. Use `getAlgoPrice()` for its USD price.
+
+² `depositAddress` is deprecated: the v2 API ignores it, so no transfer to it
+is added and the output stays in the swapping account. Passing it logs a
+one-time `console.warn`.
 
 ### Constructor
 

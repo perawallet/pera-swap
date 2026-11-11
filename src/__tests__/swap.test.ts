@@ -1,6 +1,11 @@
 import { beforeEach, describe, expect, it, vi, type Mock } from 'vitest'
 import { PeraSwap } from '../swap'
-import type { Asset, CreateQuoteBody, SwapQuote } from '../types'
+import type {
+    Asset,
+    CreateQuoteBody,
+    PrepareTransactionsResponse,
+    SwapQuote,
+} from '../types'
 
 const MAINNET = 'https://mainnet.api.perawallet.app'
 const TESTNET = 'https://testnet.api.perawallet.app'
@@ -30,7 +35,8 @@ describe('PeraSwap', () => {
     let fetch: Mock
 
     beforeEach(() => {
-        fetch = vi.fn().mockResolvedValue(jsonResponse({ results: [] }))
+        // A fresh Response per call: a body can only be read once.
+        fetch = vi.fn(() => Promise.resolve(jsonResponse({ results: [] })))
     })
 
     describe('constructor', () => {
@@ -209,6 +215,8 @@ describe('PeraSwap', () => {
     })
 
     it('prepareTransactions posts the quote and deposit address', async () => {
+        vi.spyOn(console, 'warn').mockImplementation(() => {})
+
         await new PeraSwap({ fetch }).prepareTransactions('Q1', 'DEPOSIT')
 
         const { url, init } = lastCall(fetch)
@@ -216,6 +224,186 @@ describe('PeraSwap', () => {
         expect(JSON.parse(init.body as string)).toEqual({
             quote: 'Q1',
             deposit_address: 'DEPOSIT',
+        })
+    })
+
+    describe('prepareTransactions depositAddress', () => {
+        it('warns once per instance that the v2 API ignores it, and still sends it', async () => {
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            const peraSwap = new PeraSwap({ fetch })
+
+            await peraSwap.prepareTransactions('Q1', 'DEPOSIT')
+            await peraSwap.prepareTransactions('Q2', 'DEPOSIT')
+
+            expect(warn).toHaveBeenCalledOnce()
+            expect(warn.mock.calls[0]![0]).toMatch(
+                /^@perawallet\/swap: .*depositAddress/,
+            )
+            expect(JSON.parse(lastCall(fetch).init.body as string)).toEqual({
+                quote: 'Q2',
+                deposit_address: 'DEPOSIT',
+            })
+        })
+
+        it.each([undefined, ''])(
+            'stays silent for %j',
+            async depositAddress => {
+                const warn = vi.spyOn(console, 'warn')
+
+                await new PeraSwap({ fetch }).prepareTransactions(
+                    'Q1',
+                    depositAddress,
+                )
+
+                expect(warn).not.toHaveBeenCalled()
+            },
+        )
+    })
+
+    describe('swap ids above 2^53', () => {
+        const SWAP_ID = '3762854402458834567'
+        const preparedText = (fields: string) =>
+            new Response(
+                `{"swap_id":${SWAP_ID}${fields},"swap_version":"v2","transaction_groups":[]}`,
+                { headers: { 'content-type': 'application/json' } },
+            )
+
+        it('surfaces swap_id_str and reports the exact id with it', async () => {
+            fetch.mockResolvedValueOnce(
+                preparedText(`,"swap_id_str":"${SWAP_ID}"`),
+            )
+            const peraSwap = new PeraSwap({ fetch })
+
+            const prepared = await peraSwap.prepareTransactions('Q')
+            await peraSwap.updateSwapStatus(prepared.swap_id_str!, {
+                status: 'in_progress',
+            })
+
+            expect(prepared.swap_id_str).toBe(SWAP_ID)
+            expect(lastCall(fetch).url).toBe(
+                `${MAINNET}/v2/dex-swap/swaps/${SWAP_ID}/`,
+            )
+        })
+
+        it('maps the rounded swap_id back to the exact id on the same instance', async () => {
+            const warn = vi.spyOn(console, 'warn')
+            fetch.mockResolvedValueOnce(
+                preparedText(`,"swap_id_str":"${SWAP_ID}"`),
+            )
+            const peraSwap = new PeraSwap({ fetch })
+
+            const prepared = await peraSwap.prepareTransactions('Q')
+            expect(Number.isSafeInteger(prepared.swap_id)).toBe(false)
+            await peraSwap.updateSwapStatus(prepared.swap_id, {
+                status: 'in_progress',
+            })
+
+            expect(lastCall(fetch).url).toBe(
+                `${MAINNET}/v2/dex-swap/swaps/${SWAP_ID}/`,
+            )
+            expect(warn).not.toHaveBeenCalled()
+        })
+
+        it('warns once and sends an unknown unsafe id as before', async () => {
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            const rounded = Number(SWAP_ID)
+            const peraSwap = new PeraSwap({ fetch })
+
+            await peraSwap.updateSwapStatus(rounded, { status: 'in_progress' })
+            await peraSwap.updateSwapStatus(rounded, { status: 'in_progress' })
+
+            expect(lastCall(fetch).url).toBe(
+                `${MAINNET}/v2/dex-swap/swaps/${String(rounded)}/`,
+            )
+            expect(warn).toHaveBeenCalledOnce()
+            expect(warn.mock.calls[0]![0]).toMatch(
+                /^@perawallet\/swap: .*swap_id_str/,
+            )
+        })
+
+        it('leaves safe ids alone without warning', async () => {
+            const warn = vi.spyOn(console, 'warn')
+
+            await new PeraSwap({ fetch }).updateSwapStatus(42, {
+                status: 'in_progress',
+            })
+
+            expect(lastCall(fetch).url).toBe(`${MAINNET}/v2/dex-swap/swaps/42/`)
+            expect(warn).not.toHaveBeenCalled()
+        })
+
+        it('sends non-integer ids as before without spending the warning', async () => {
+            const warn = vi.spyOn(console, 'warn').mockImplementation(() => {})
+            const peraSwap = new PeraSwap({ fetch })
+
+            for (const swapId of [Number.NaN, 42.5, Number.POSITIVE_INFINITY]) {
+                await peraSwap.updateSwapStatus(swapId, {
+                    status: 'in_progress',
+                })
+                expect(lastCall(fetch).url).toBe(
+                    `${MAINNET}/v2/dex-swap/swaps/${String(swapId)}/`,
+                )
+            }
+            expect(warn).not.toHaveBeenCalled()
+
+            await peraSwap.updateSwapStatus(Number(SWAP_ID), {
+                status: 'in_progress',
+            })
+            expect(warn).toHaveBeenCalledOnce()
+        })
+
+        it('returns a response without swap_id_str unchanged', async () => {
+            fetch.mockResolvedValueOnce(preparedText(''))
+
+            const prepared = await new PeraSwap({ fetch }).prepareTransactions(
+                'Q',
+            )
+
+            // Typed, so a hand-built response without the field must compile.
+            const expected: PrepareTransactionsResponse = {
+                swap_id: Number(SWAP_ID),
+                swap_version: 'v2',
+                transaction_groups: [],
+            }
+            expect(prepared).toEqual(expected)
+        })
+
+        it('remembers only the most recent swaps', async () => {
+            vi.spyOn(console, 'warn').mockImplementation(() => {})
+            // Ids 512 apart round to distinct doubles at this magnitude.
+            const ids = Array.from(
+                { length: 51 },
+                (_, i) => BigInt(SWAP_ID) + BigInt(i * 1024),
+            )
+            const peraSwap = new PeraSwap({ fetch })
+            const prepared = []
+            for (const id of ids) {
+                fetch.mockResolvedValueOnce(
+                    new Response(
+                        `{"swap_id":${id},"swap_id_str":"${id}","swap_version":"v2","transaction_groups":[]}`,
+                    ),
+                )
+                prepared.push(await peraSwap.prepareTransactions('Q'))
+            }
+
+            await peraSwap.updateSwapStatus(prepared[0]!.swap_id, {
+                status: 'in_progress',
+            })
+            expect(lastCall(fetch).url).not.toContain(String(ids[0]))
+
+            await peraSwap.updateSwapStatus(prepared[1]!.swap_id, {
+                status: 'in_progress',
+            })
+            expect(lastCall(fetch).url).toBe(
+                `${MAINNET}/v2/dex-swap/swaps/${ids[1]}/`,
+            )
+
+            await peraSwap.updateSwapStatus(prepared[50]!.swap_id, {
+                status: 'in_progress',
+            })
+            expect(lastCall(fetch).url).toBe(
+                `${MAINNET}/v2/dex-swap/swaps/${ids[50]}/`,
+            )
         })
     })
 

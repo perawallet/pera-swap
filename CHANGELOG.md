@@ -1,5 +1,42 @@
 # Changelog
 
+## Unreleased
+
+### Added
+
+- `PrepareTransactionsResponse.swap_id_str?: string`, the exact swap id. The
+  API has always sent it. It is optional only so that hand-built responses
+  keep compiling.
+
+### Fixed
+
+- `updateSwapStatus(prepared.swap_id, ...)`, as the README showed, reported to
+  the wrong URL and got a 404. Swap ids are larger than 2^53, so `swap_id`
+  loses precision as a JS number. The README now passes
+  `prepared.swap_id_str`. A rounded `swap_id` from a swap prepared by the same
+  `PeraSwap` instance (one of its last 50) is resolved to the exact id; any
+  other integer above 2^53 logs a one-time `console.warn` and is sent as
+  before.
+- The `WidgetController` JSDoc example and the README's "Other widgets"
+  snippet asked the wallet to sign every transaction, which fails with Pera
+  Connect 1.7 or later. They now sign only your account's transactions.
+
+### Deprecated
+
+- `prepareTransactions`' `depositAddress`. The v2 API ignores it: no transfer
+  to it is added and the output stays in the swapping account. It is still
+  sent, and passing it logs a one-time `console.warn`.
+
+### Documentation
+
+- `getAsset(0)` always resolves to `null`, because ALGO isn't an ASA. Use
+  `getAlgoPrice()` for its price.
+- JSDoc on fields the types describe loosely: `Asset.logo` can be `null`,
+  `is_verified` and `type` are missing on quote and available-assets assets,
+  `reason` is required for a `'failed'` status, `pera_fee_amount` is in
+  microALGO, `exchange_fee_amount`'s unit depends on the provider, and
+  `slippage` takes at most 4 decimal places.
+
 ## 1.0.0-beta.5
 
 This release has breaking changes. Most apps need at most one of the steps

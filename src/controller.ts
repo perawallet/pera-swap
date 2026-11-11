@@ -52,7 +52,19 @@ interface SendMessageParams {
  * requests to your wallet and widget events to your callbacks.
  *
  * @example
- * const controller = new WidgetController({ onTxnSignRequest: ({ txGroups }) => wallet.sign(txGroups) })
+ * // Sign only your account's transactions; Pera has signed the rest.
+ * const controller = new WidgetController({
+ *     onTxnSignRequest: ({ txGroups }) =>
+ *         peraWallet.signTransaction(
+ *             txGroups.map(group =>
+ *                 group.map(txn =>
+ *                     txn.sender.toString() === ACCOUNT
+ *                         ? { txn }
+ *                         : { txn, signers: [] },
+ *                 ),
+ *             ),
+ *         ),
+ * })
  * controller.addWidgetEventListeners()
  * // later
  * controller.removeWidgetEventListeners()

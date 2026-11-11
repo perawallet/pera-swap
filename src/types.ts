@@ -106,16 +106,27 @@ export type AssetType = 'standard_asset' | 'collectible' | 'dapp_asset'
 export interface Asset {
     asset_id: number
     name: string
+    /** `null` at runtime for assets without a logo. */
     logo: string
     unit_name: string
     fraction_decimals: number
     usd_value: string | null
+    /**
+     * Only sent by `getAssets` / `getAsset` / `searchAssets`; missing on
+     * quote assets and `getAvailableAssets` results. Use `verification_tier`,
+     * which every endpoint sends.
+     */
     is_verified: boolean
     verification_tier: VerificationTier
+    /**
+     * Only sent by `getAssets` / `getAsset` / `searchAssets`; missing on
+     * quote assets and `getAvailableAssets` results.
+     */
     type: AssetType
 }
 
 export interface SwapQuote {
+    /** Can lose precision as a JS number; use `quote_id_str`. */
     id: number
     quote_id_str: string
     provider: SwapProvider
@@ -132,7 +143,13 @@ export interface SwapQuote {
     slippage: string
     price: string
     price_impact: string
+    /** Pera fee in microALGO (base units of ALGO). */
     pera_fee_amount: string
+    /**
+     * Fee reported by the swap provider, in base units. The unit depends on
+     * the provider (asset_in base units for some, microALGO for others), so
+     * treat it as informational and don't use it for arithmetic.
+     */
     exchange_fee_amount: string
 }
 
@@ -145,7 +162,7 @@ export interface CreateQuoteBody {
     asset_out_id: number
     /** Amount in base units of the fixed asset (e.g. microAlgos). */
     amount: string
-    /** Decimal fraction, e.g. `'0.005'` for 0.5%. */
+    /** Decimal fraction with at most 4 decimal places, e.g. `'0.005'` for 0.5%. */
     slippage: string
 }
 
@@ -168,7 +185,16 @@ export interface SwapTransactionGroup {
 }
 
 export interface PrepareTransactionsResponse {
+    /**
+     * Can lose precision as a JS number (swap ids exceed 2^53); pass
+     * `swap_id_str` to `updateSwapStatus`.
+     */
     swap_id: number
+    /**
+     * Exact swap id. The API always sends it; it is optional so that
+     * hand-built responses written before it was declared keep compiling.
+     */
+    swap_id_str?: string
     swap_version: string
     transaction_groups: SwapTransactionGroup[]
 }
@@ -184,6 +210,7 @@ export type SwapFailureReason =
 export interface UpdateSwapStatusBody {
     status: SwapStatus
     submitted_transaction_ids?: string[]
+    /** Required when `status` is `'failed'`; the API answers 400 without it. */
     reason?: SwapFailureReason
     /** @deprecated Always overridden by the SDK. */
     platform?: string
