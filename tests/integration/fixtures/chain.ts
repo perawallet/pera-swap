@@ -35,15 +35,20 @@ export interface SwapScenario {
     user: Account
     escrow: LogicSigAccount
     response: PrepareTransactionsResponse
+    /** `response` as the API sends it, with `swap_id` at full precision. */
+    responseText: string
     /** Unsigned transactions per group, in API order. */
     groups: Transaction[][]
 }
+
+/** A snowflake-sized id, like the API's: above 2^53, so `JSON.parse` rounds it. */
+export const SWAP_ID = '3762854402458834567'
 
 /**
  * Builds a realistic `prepare-transactions` response: an opt-in group the
  * user signs, and a swap group where the escrow leg is already signed by Pera.
  */
-export function buildSwapScenario(swapId = 4242): SwapScenario {
+export function buildSwapScenario(swapId = SWAP_ID): SwapScenario {
     const user = generateAccount()
     const escrow = new LogicSigAccount(ESCROW_PROGRAM)
     const escrowAddress = escrow.address()
@@ -81,35 +86,31 @@ export function buildSwapScenario(swapId = 4242): SwapScenario {
     const groups = [[optIn], [payIn, appCall, payOut]]
     const escrowSigned = signLogicSigTransactionObject(payOut, escrow).blob
 
-    return {
-        user,
-        escrow,
-        groups,
-        response: {
-            swap_id: swapId,
-            swap_version: 'v2',
-            transaction_groups: [
-                {
-                    purpose: 'opt-in',
-                    transaction_group_id: bytesToBase64(optIn.rawTxID()),
-                    transactions: [
-                        bytesToBase64(encodeUnsignedTransaction(optIn)),
-                    ],
-                    signed_transactions: [null],
-                },
-                {
-                    purpose: 'swap',
-                    transaction_group_id: bytesToBase64(payIn.group!),
-                    transactions: [payIn, appCall, payOut].map(t =>
-                        bytesToBase64(encodeUnsignedTransaction(t)),
-                    ),
-                    signed_transactions: [
-                        null,
-                        null,
-                        bytesToBase64(escrowSigned),
-                    ],
-                },
-            ],
-        },
+    const response: PrepareTransactionsResponse = {
+        swap_id: Number(swapId),
+        swap_id_str: swapId,
+        swap_version: 'v2',
+        transaction_groups: [
+            {
+                purpose: 'opt-in',
+                transaction_group_id: bytesToBase64(optIn.rawTxID()),
+                transactions: [bytesToBase64(encodeUnsignedTransaction(optIn))],
+                signed_transactions: [null],
+            },
+            {
+                purpose: 'swap',
+                transaction_group_id: bytesToBase64(payIn.group!),
+                transactions: [payIn, appCall, payOut].map(t =>
+                    bytesToBase64(encodeUnsignedTransaction(t)),
+                ),
+                signed_transactions: [null, null, bytesToBase64(escrowSigned)],
+            },
+        ],
     }
+    const responseText = JSON.stringify({
+        ...response,
+        swap_id: '__SWAP_ID__',
+    }).replace('"__SWAP_ID__"', swapId)
+
+    return { user, escrow, groups, response, responseText }
 }

@@ -5,10 +5,10 @@ import {
     decodeUnsignedTransaction,
 } from 'algosdk'
 import { delay, http, HttpResponse } from 'msw'
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { PeraSwap, PeraSwapApiError, type CreateQuoteBody } from '../../src'
 import { ALGO, makeQuote, USDC } from './fixtures/api'
-import { buildSwapScenario, USDC_ID } from './fixtures/chain'
+import { buildSwapScenario, SWAP_ID, USDC_ID } from './fixtures/chain'
 import { MAINNET_API, server, TESTNET_API } from './server'
 
 const REFERRER = 'https://dapp.example'
@@ -55,7 +55,9 @@ describe('swap flow against the Pera API', () => {
                 async ({ request }) => {
                     const body = await request.json()
                     requests.push({ method: 'POST', path: 'prepare', body })
-                    return HttpResponse.json(scenario.response)
+                    return HttpResponse.text(scenario.responseText, {
+                        headers: { 'Content-Type': 'application/json' },
+                    })
                 },
             ),
             http.patch(
@@ -129,7 +131,7 @@ describe('swap flow against the Pera API', () => {
         expect(submitted).toHaveLength(4)
 
         // 4. Report submission.
-        await peraSwap.updateSwapStatus(prepared.swap_id, {
+        await peraSwap.updateSwapStatus(prepared.swap_id_str!, {
             status: 'in_progress',
             submitted_transaction_ids: txIds,
         })
@@ -147,7 +149,7 @@ describe('swap flow against the Pera API', () => {
             },
             {
                 method: 'PATCH',
-                path: 'swaps/4242',
+                path: `swaps/${SWAP_ID}`,
                 body: {
                     status: 'in_progress',
                     submitted_transaction_ids: txIds,
@@ -184,7 +186,36 @@ describe('swap flow against the Pera API', () => {
         })
     })
 
+    it('reports with a rounded swap_id on the instance that prepared it', async () => {
+        const scenario = buildSwapScenario()
+        const patched: string[] = []
+        server.use(
+            http.post(`${MAINNET_API}/v2/dex-swap/prepare-transactions/`, () =>
+                HttpResponse.text(scenario.responseText, {
+                    headers: { 'Content-Type': 'application/json' },
+                }),
+            ),
+            http.patch(
+                `${MAINNET_API}/v2/dex-swap/swaps/:swapId/`,
+                ({ params }) => {
+                    patched.push(String(params.swapId))
+                    return HttpResponse.json({ status: 'in_progress' })
+                },
+            ),
+        )
+        const peraSwap = new PeraSwap()
+
+        const prepared = await peraSwap.prepareTransactions('q')
+        await peraSwap.updateSwapStatus(prepared.swap_id, {
+            status: 'in_progress',
+        })
+
+        expect(prepared.swap_id_str).toBe(SWAP_ID)
+        expect(patched).toEqual([SWAP_ID])
+    })
+
     it('sends the deposit address when preparing transactions', async () => {
+        vi.spyOn(console, 'warn').mockImplementation(() => {})
         let received: unknown
         server.use(
             http.post(
