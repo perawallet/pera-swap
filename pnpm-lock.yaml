@@ -57,8 +57,8 @@ importers:
   examples/react:
     dependencies:
       '@perawallet/connect':
-        specifier: 1.9.0
-        version: 1.9.0(algosdk@3.9.0)
+        specifier: 1.10.1
+        version: 1.10.1(algosdk@3.9.0)
       '@perawallet/swap':
         specifier: workspace:*
         version: link:../..
@@ -172,8 +172,8 @@ packages:
     resolution: {integrity: sha512-OoKoR0f76dCY666JlcbhmVTs2drYj1GUXZTYTcbUgJjh9Nv41aFfZ21bPQTERm5+L5cBDo466NltB2lplS5GBw==}
     engines: {node: '>=20.19.0'}
 
-  '@evanhahn/lottie-web-light@5.8.1':
-    resolution: {integrity: sha512-U0G1tt3/UEYnyCNNslWPi1dB7X1xQ9aoSip+B3GTKO/Bns8yz/p39vBkRSN9d25nkbHuCsbjky2coQftj5YVKw==}
+  '@evanhahn/lottie-web-light@5.13.0':
+    resolution: {integrity: sha512-PHAHINsB8BDjzK9iICzjI/KS2dG8CqwJDEP6Zi0zO7Sonv8Lax2ajaeciWvoZtrN7Hyr2K4zR3NQgk6Hap8BYQ==}
 
   '@exodus/bytes@1.16.0':
     resolution: {integrity: sha512-IcpW84uEn3N7ETtNZMlxKhfl6Pec8rUNGOTBtWbK1FKhJxIFAptZyVrvVRVBimAJxJCgc3PxepxkdWWG4DVzfA==}
@@ -548,13 +548,13 @@ packages:
     cpu: [x64]
     os: [win32]
 
-  '@perawallet/connect@1.9.0':
-    resolution: {integrity: sha512-noQPFclDfw0RHPbz8SVBENNnF+zTuM+dIt4LT9OlgmrihjXmMggUAHJJxweaNbTTBeUPcWxIETH/5xGHPI7kvg==}
+  '@perawallet/connect@1.10.1':
+    resolution: {integrity: sha512-vR/TYzTfplV8Xz79ayJRIwkuwSM4RGCaEum5u7BW//RYgxGI2FfOKHoSOAlKznZMUvHPTXQFaOMFIetGhMHUQw==}
     peerDependencies:
       algosdk: ^3.5.2
 
-  '@perawallet/walletconnect@1.0.2':
-    resolution: {integrity: sha512-HJoN0XvnAhAXYNu0UV0FVDmYxzPEB4YWvwQ0o/JIdZFqFOdM7rZ+zlZq/+wdTICkxrLe35i1Zol59ycN3LKcvg==}
+  '@perawallet/walletconnect@1.0.4':
+    resolution: {integrity: sha512-WTli7W2NikH56Btfmw+EMSCSnynyjJi31THeN2jY7794H2NLGtov7otxkeiVaJlFxO5GshWz/kjD5W065Ne3Og==}
     engines: {node: '>=22'}
 
   '@playwright/test@1.64.1':
@@ -1068,8 +1068,8 @@ packages:
   bignumber.js@9.3.1:
     resolution: {integrity: sha512-Ko0uX15oIUS7wJ3Rb30Fs6SkVbLmPBAKdlm7q9+ak9bbIeFf0MwuBsQV6z7+X768/cHsfg+WlysDWJcmthjsjQ==}
 
-  bowser@2.11.0:
-    resolution: {integrity: sha512-AlcaJBi/pqqJBIQ8U9Mcpc9i8Aqxn88Skv5d+xBX006BY5u8N3mGLHa5Lgppa7L/HfwgwLgZ6NYs+Ag6uUmJRA==}
+  bowser@2.14.1:
+    resolution: {integrity: sha512-tzPjzCxygAKWFOJP011oxFHs57HzIhOEracIgAePE4pqB3LikALKnSzUyU4MGs9/iCEUuHlAJTjTc5M+u7YEGg==}
 
   braces@3.0.3:
     resolution: {integrity: sha512-yQbXgO/OSZVD2IsiLlro+7Hf6Q18EJrKSEsdoMzKePKXct3gvD8oLcOQdIzGupr5Fj+EDe8gO/lxc1BzfMpxvA==}
@@ -1576,8 +1576,9 @@ packages:
     resolution: {integrity: sha512-vYt7UD1U9Wg6138shLtLOvdAu+8DsC/ilFtEVHcH+wydcSpNE20AfSOduf6MkRFahL5FY7X1oU7nKVZFtfq8Fg==}
     engines: {node: '>=6'}
 
-  qr-code-styling@1.6.0-rc.1:
-    resolution: {integrity: sha512-ModRIiW6oUnsP18QzrRYZSc/CFKFKIdj7pUs57AEVH20ajlglRpN3HukjHk0UbNMTlKGuaYl7Gt6/O5Gg2NU2Q==}
+  qr-code-styling@1.9.2:
+    resolution: {integrity: sha512-RgJaZJ1/RrXJ6N0j7a+pdw3zMBmzZU4VN2dtAZf8ZggCfRB5stEQ3IoDNGaNhYY3nnZKYlYSLl5YkfWN5dPutg==}
+    engines: {node: '>=18.18.0'}
 
   qrcode-generator@1.5.2:
     resolution: {integrity: sha512-pItrW0Z9HnDBnFmgiNrY1uxRdri32Uh9EjNYLPVC2zZ3ZRIIEqBoDgm4DkvDwNNDHTK7FNkmr8zAa77BYc9xNw==}
@@ -1791,15 +1792,6 @@ packages:
         optional: true
       unrun:
         optional: true
-
-  tslib@1.14.1:
-    resolution: {integrity: sha512-Xni35NKzjgMrwevysHTCArtLDpPvye8zV/0E4EyYn43P7/7qvQwPh9BGkHewbMulVntbigmcT7rdX3BNo9wRJg==}
-
-  tslib@2.8.1:
-    resolution: {integrity: sha512-oJFu94HQb+KVduSUQL7wnpmqnfmLsOA/nAh6b6EH0wCEoK0/mPeXU6c3wKDV83MkOuHPRHtSXKKU99IBazS/2w==}
-
-  tweetnacl-ts@1.0.3:
-    resolution: {integrity: sha512-C5I/dWf6xjAXaCDlf84T4HvozU/8ycAlq5WRllF1hAeeq5390tfXD+bNas5bhEV0HMSOx8bsQYpLjPl8wfnEeQ==}
 
   tweetnacl@1.0.3:
     resolution: {integrity: sha512-6rt+RN7aOi1nGMyC4Xa5DdYiukl2UWCbcJft7YhxReBGQD7OAM8Pbxw6YMo4r2diNEA8FEmu32YOn9rhaiE5yw==}
@@ -2068,7 +2060,7 @@ snapshots:
 
   '@csstools/css-tokenizer@4.0.2': {}
 
-  '@evanhahn/lottie-web-light@5.8.1': {}
+  '@evanhahn/lottie-web-light@5.13.0': {}
 
   '@exodus/bytes@1.16.0(@noble/hashes@2.4.0)':
     optionalDependencies:
@@ -2286,18 +2278,17 @@ snapshots:
   '@oxlint/binding-win32-x64-msvc@1.89.0':
     optional: true
 
-  '@perawallet/connect@1.9.0(algosdk@3.9.0)':
+  '@perawallet/connect@1.10.1(algosdk@3.9.0)':
     dependencies:
-      '@evanhahn/lottie-web-light': 5.8.1
-      '@perawallet/walletconnect': 1.0.2
+      '@evanhahn/lottie-web-light': 5.13.0
+      '@perawallet/walletconnect': 1.0.4
       algosdk: 3.9.0
-      bowser: 2.11.0
+      bowser: 2.14.1
       buffer: 6.0.3
-      qr-code-styling: 1.6.0-rc.1
-      tslib: 2.8.1
-      tweetnacl-ts: 1.0.3
+      qr-code-styling: 1.9.2
+      tweetnacl: 1.0.3
 
-  '@perawallet/walletconnect@1.0.2':
+  '@perawallet/walletconnect@1.0.4':
     dependencies:
       '@noble/ciphers': 2.4.0
       '@noble/hashes': 2.4.0
@@ -2610,7 +2601,7 @@ snapshots:
 
   bignumber.js@9.3.1: {}
 
-  bowser@2.11.0: {}
+  bowser@2.14.1: {}
 
   braces@3.0.3:
     dependencies:
@@ -3088,7 +3079,7 @@ snapshots:
 
   punycode@2.3.1: {}
 
-  qr-code-styling@1.6.0-rc.1:
+  qr-code-styling@1.9.2:
     dependencies:
       qrcode-generator: 1.5.2
 
@@ -3282,14 +3273,6 @@ snapshots:
       - '@vue/language-core'
       - oxc-resolver
       - vue-tsc
-
-  tslib@1.14.1: {}
-
-  tslib@2.8.1: {}
-
-  tweetnacl-ts@1.0.3:
-    dependencies:
-      tslib: 1.14.1
 
   tweetnacl@1.0.3: {}
 
